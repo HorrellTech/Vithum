@@ -13,6 +13,23 @@ class VithumApp {
     async init() {
         try {
             console.log('Initializing Vithum Audio Visualizer Studio...');
+        
+            // Check if required classes are available with more detailed logging
+            const requiredClasses = ['AudioManager', 'CanvasManager', 'UIManager', 'VisualizerFactory'];
+            const missingClasses = [];
+            
+            requiredClasses.forEach(className => {
+                if (typeof window[className] === 'undefined') {
+                    console.error(`Missing class: ${className}`);
+                    missingClasses.push(className);
+                } else {
+                    console.log(`✓ ${className} loaded successfully`);
+                }
+            });
+            
+            if (missingClasses.length > 0) {
+                throw new Error(`Missing required classes: ${missingClasses.join(', ')}`);
+            }
             
             // Initialize core components
             this.audio = new AudioManager();
@@ -25,6 +42,9 @@ class VithumApp {
             // Start main animation loop
             this.startAnimationLoop();
             
+            // Setup audio timeline updates
+            this.setupAudioTimelineUpdates();
+
             console.log('Vithum Studio initialized successfully');
             
             // Show welcome message
@@ -34,6 +54,67 @@ class VithumApp {
             console.error('Failed to initialize Vithum Studio:', error);
             this.showErrorMessage('Failed to initialize the application. Please refresh and try again.');
         }
+    }
+
+    setupAudioTimelineUpdates() {
+        // Timeline update interval
+        this.timelineUpdateInterval = setInterval(() => {
+            if (this.audio && this.audio.audioElement) {
+                const audioElement = this.audio.audioElement;
+                const progressBar = document.getElementById('progressBar');
+                const currentTimeSpan = document.getElementById('currentTime');
+                const totalTimeSpan = document.getElementById('totalTime');
+                
+                if (progressBar && currentTimeSpan && totalTimeSpan) {
+                    if (audioElement.duration && !isNaN(audioElement.duration)) {
+                        const progress = (audioElement.currentTime / audioElement.duration) * 100;
+                        
+                        // Only update if user is not currently dragging the slider
+                        if (!progressBar.classList.contains('dragging')) {
+                            progressBar.value = progress;
+                        }
+                        
+                        currentTimeSpan.textContent = this.formatTime(audioElement.currentTime);
+                        totalTimeSpan.textContent = this.formatTime(audioElement.duration);
+                    }
+                }
+            }
+        }, 100);
+        
+        // Set up progress bar seeking after a small delay to ensure DOM is ready
+        setTimeout(() => {
+            const progressBar = document.getElementById('progressBar');
+            if (progressBar) {
+                // Handle seeking when user drags the progress bar
+                progressBar.addEventListener('input', (e) => {
+                    if (this.audio && this.audio.audioElement) {
+                        const audioElement = this.audio.audioElement;
+                        if (audioElement.duration && !isNaN(audioElement.duration)) {
+                            const seekTime = (e.target.value / 100) * audioElement.duration;
+                            audioElement.currentTime = seekTime;
+                        }
+                    }
+                });
+                
+                // Mark slider as being dragged to prevent conflicts
+                progressBar.addEventListener('mousedown', () => {
+                    progressBar.classList.add('dragging');
+                });
+                
+                progressBar.addEventListener('mouseup', () => {
+                    progressBar.classList.remove('dragging');
+                });
+                
+                // Handle touch events for mobile
+                progressBar.addEventListener('touchstart', () => {
+                    progressBar.classList.add('dragging');
+                });
+                
+                progressBar.addEventListener('touchend', () => {
+                    progressBar.classList.remove('dragging');
+                });
+            }
+        }, 500);
     }
 
     startAnimationLoop() {
@@ -55,6 +136,34 @@ class VithumApp {
         };
         
         animate();
+    }
+
+    addVisualizer(type, x, y, width = 200, height = 200) {
+        try {
+            // Check if VisualizerFactory is available
+            if (typeof VisualizerFactory === 'undefined') {
+                console.error('VisualizerFactory is not loaded yet');
+                return null;
+            }
+            
+            const visualizer = VisualizerFactory.create(type, x, y, width, height);
+            this.visualizers.push(visualizer);
+            this.selectVisualizer(visualizer);
+            this.hideDropZone();
+            return visualizer;
+        } catch (error) {
+            console.error('Failed to create visualizer:', error);
+            // Show user-friendly error message
+            if (window.app) {
+                window.app.showNotification(
+                    'Error',
+                    `Failed to create ${type} visualizer. Please try again.`,
+                    'error',
+                    3000
+                );
+            }
+            return null;
+        }
     }
 
     showWelcomeMessage() {
@@ -289,7 +398,7 @@ class VithumApp {
 
     // Restore from auto-save
     restoreAutoSave() {
-        try {
+        /*try {
             const data = localStorage.getItem('vithum_autosave');
             if (data) {
                 const projectData = JSON.parse(data);
@@ -308,7 +417,16 @@ class VithumApp {
             }
         } catch (error) {
             console.error('Failed to restore auto-save:', error);
-        }
+        }*/
+    }
+
+    formatTime(seconds) {
+        if (isNaN(seconds) || seconds === 0) return '0:00';
+        
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
 
     // Cleanup on page unload

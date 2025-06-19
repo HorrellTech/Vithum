@@ -69,9 +69,7 @@ class AudioManager {
         document.getElementById('audioFile').addEventListener('change', (e) => {
             this.loadAudioFile(e.target.files[0]);
         });
-    }
-
-    async connectAudioSource() {
+    }    async connectAudioSource() {
         if (!this.audioContext || !this.analyser) {
             await this.setupAudio();
         }
@@ -82,35 +80,55 @@ class AudioManager {
                 this.audioSource.disconnect();
             }
             
-            // Create new source
+            // Create new source from audio element
             this.audioSource = this.audioContext.createMediaElementSource(this.audioElement);
             
             // Connect: source -> analyser -> destination
             this.audioSource.connect(this.analyser);
             this.analyser.connect(this.audioContext.destination);
             
-            console.log('Audio source connected');
+            console.log('Audio source connected successfully');
         } catch (error) {
             console.error('Failed to connect audio source:', error);
+            
+            // If the audio element is already connected to a source, try a different approach
+            if (error.name === 'InvalidStateError') {
+                console.log('Audio element already has a source, skipping connection');
+                return;
+            }
+            throw error;
         }
-    }
-
-    loadAudioFile(file) {
+    }loadAudioFile(file) {
         if (!file) return;
         
         this.audioFile = file;
+        
+        // Clean up any existing URL
+        if (this.audioElement.src && this.audioElement.src.startsWith('blob:')) {
+            URL.revokeObjectURL(this.audioElement.src);
+        }
+        
         const url = URL.createObjectURL(file);
         this.audioElement.src = url;
         
-        // Clean up old URL
-        this.audioElement.addEventListener('loadeddata', () => {
-            URL.revokeObjectURL(url);
+        // Store URL for later cleanup
+        this.currentBlobUrl = url;
+        
+        // Clean up URL after audio is loaded and can be played
+        this.audioElement.addEventListener('canplaythrough', () => {
+            console.log('Audio ready to play:', file.name);
+        }, { once: true });
+        
+        this.audioElement.addEventListener('error', (e) => {
+            console.error('Audio loading error:', e);
+            if (this.currentBlobUrl) {
+                URL.revokeObjectURL(this.currentBlobUrl);
+                this.currentBlobUrl = null;
+            }
         }, { once: true });
         
         console.log('Loading audio file:', file.name);
-    }
-
-    async play() {
+    }    async play() {
         if (!this.audioElement.src) {
             console.warn('No audio file loaded');
             return;
@@ -119,12 +137,27 @@ class AudioManager {
         try {
             // Resume audio context if suspended
             if (this.audioContext && this.audioContext.state === 'suspended') {
+                console.log('Resuming audio context...');
                 await this.audioContext.resume();
             }
             
+            // Ensure audio source is connected
+            if (!this.audioSource && this.audioElement.src) {
+                await this.connectAudioSource();
+            }
+            
             await this.audioElement.play();
+            console.log('Audio playback started');
         } catch (error) {
             console.error('Failed to play audio:', error);
+            
+            // Try to reinitialize audio if there's a context issue
+            if (error.name === 'NotSupportedError' || error.name === 'InvalidStateError') {
+                console.log('Reinitializing audio system...');
+                await this.setupAudio();
+                await this.connectAudioSource();
+                await this.audioElement.play();
+            }
         }
     }
 
@@ -336,11 +369,18 @@ class AudioManager {
 
     // Cleanup
     cleanup() {
-        if (this.audioSource) {
-            this.audioSource.disconnect();
+        if (this.currentBlobUrl) {
+            URL.revokeObjectURL(this.currentBlobUrl);
+            this.currentBlobUrl = null;
         }
-        if (this.audioContext) {
+        
+        if (this.audioContext && this.audioContext.state !== 'closed') {
             this.audioContext.close();
+        }
+        
+        if (this.audioElement) {
+            this.audioElement.pause();
+            this.audioElement.src = '';
         }
     }
 }

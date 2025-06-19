@@ -12,6 +12,7 @@ class BaseVisualizer {
         this.scaleY = 1;
         this.selected = false;
         this.visible = true;
+        this.selectable = true; // Add this property
         this.opacity = 1;
         
         // Common properties
@@ -152,6 +153,8 @@ class BaseVisualizer {
             backgroundColor: this.backgroundColor,
             strokeWidth: this.strokeWidth,
             opacity: this.opacity,
+            visible: this.visible,
+            selectable: this.selectable, // Add this line
             reactToAudio: this.reactToAudio,
             sensitivity: this.sensitivity,
             smoothing: this.smoothing,
@@ -175,7 +178,6 @@ class BaseVisualizer {
 class WaveformVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.waveColor = '#00d4ff';
         this.lineWidth = 2;
         this.fillWave = false;
         this.mirror = false;
@@ -205,9 +207,8 @@ class WaveformVisualizer extends BaseVisualizer {
         if (this.audioData && this.audioData.length > 0) {
             const smoothedData = Utils.smoothArray(this.audioData, this.smoothing);
             const sliceWidth = bounds.width / smoothedData.length;
-            
-            ctx.beginPath();
-            ctx.strokeStyle = this.waveColor;
+              ctx.beginPath();
+            ctx.strokeStyle = this.color;
             ctx.lineWidth = this.lineWidth;
             
             let x = bounds.x;
@@ -223,12 +224,11 @@ class WaveformVisualizer extends BaseVisualizer {
                 
                 x += sliceWidth;
             }
-            
-            if (this.fillWave) {
+              if (this.fillWave) {
                 ctx.lineTo(bounds.x + bounds.width, bounds.y + bounds.height/2);
                 ctx.lineTo(bounds.x, bounds.y + bounds.height/2);
                 ctx.closePath();
-                ctx.fillStyle = this.waveColor + '40';
+                ctx.fillStyle = this.color + '40';
                 ctx.fill();
             }
             
@@ -242,7 +242,6 @@ class WaveformVisualizer extends BaseVisualizer {
 class FrequencyVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.barColor = '#00d4ff';
         this.barSpacing = 2;
         this.barCount = 64;
         this.logarithmic = true;
@@ -294,9 +293,8 @@ class FrequencyVisualizer extends BaseVisualizer {
                 
                 const x = bounds.x + i * (barWidth + this.barSpacing);
                 const y = bounds.y + bounds.height - barHeight;
-                
-                // Draw bar
-                ctx.fillStyle = this.barColor;
+                  // Draw bar
+                ctx.fillStyle = this.color;
                 ctx.fillRect(x, y, barWidth, barHeight);
                 
                 // Draw peak
@@ -315,7 +313,6 @@ class FrequencyVisualizer extends BaseVisualizer {
 class CircleVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.circleColor = '#00d4ff';
         this.filled = false;
         this.pulseAmount = 20;
         this.baseRadius = 50;
@@ -338,16 +335,14 @@ class CircleVisualizer extends BaseVisualizer {
             const average = Utils.average(this.audioData);
             const pulseMultiplier = 1 + (average / 255) * this.pulseAmount * this.sensitivity;
             radius *= pulseMultiplier;
-        }
-
-        ctx.beginPath();
+        }        ctx.beginPath();
         ctx.arc(0, 0, radius, 0, 2 * Math.PI);
         
         if (this.filled) {
-            ctx.fillStyle = this.circleColor;
+            ctx.fillStyle = this.color;
             ctx.fill();
         } else {
-            ctx.strokeStyle = this.circleColor;
+            ctx.strokeStyle = this.color;
             ctx.lineWidth = this.strokeWidth;
             ctx.stroke();
         }
@@ -359,7 +354,6 @@ class CircleVisualizer extends BaseVisualizer {
 class SpiralVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.spiralColor = '#00d4ff';
         this.spiralTurns = 3;
         this.spiralSpacing = 10;
         this.animated = true;
@@ -383,9 +377,8 @@ class SpiralVisualizer extends BaseVisualizer {
 
         const maxRadius = Math.min(this.width, this.height) / 2;
         const steps = 200;
-        
-        ctx.beginPath();
-        ctx.strokeStyle = this.spiralColor;
+          ctx.beginPath();
+        ctx.strokeStyle = this.color;
         ctx.lineWidth = this.strokeWidth;
         
         for (let i = 0; i <= steps; i++) {
@@ -417,7 +410,6 @@ class SpiralVisualizer extends BaseVisualizer {
 class RadialVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.radialColor = '#00d4ff';
         this.lineCount = 32;
         this.innerRadius = 20;
         this.outerRadius = 100;
@@ -434,7 +426,7 @@ class RadialVisualizer extends BaseVisualizer {
         ctx.scale(this.scaleX, this.scaleY);
         ctx.globalAlpha = this.opacity;
 
-        ctx.strokeStyle = this.radialColor;
+        ctx.strokeStyle = this.color;
         ctx.lineWidth = this.strokeWidth;
 
         if (this.frequencyData && this.reactToAudio) {
@@ -442,28 +434,16 @@ class RadialVisualizer extends BaseVisualizer {
             
             for (let i = 0; i < dataPoints; i++) {
                 const angle = (i / dataPoints) * 2 * Math.PI;
-                const dataIndex = Math.floor(i * this.frequencyData.length / dataPoints);
-                const amplitude = this.frequencyData[dataIndex] / 255 * this.sensitivity;
+                const freqValue = this.frequencyData[i] || 0;
+                const amplitude = (freqValue / 255) * this.sensitivity;
                 
-                const innerX = Math.cos(angle) * this.innerRadius;
-                const innerY = Math.sin(angle) * this.innerRadius;
-                const outerRadius = this.innerRadius + amplitude * (this.outerRadius - this.innerRadius);
+                const innerRadius = this.innerRadius;
+                const outerRadius = this.outerRadius + amplitude * 50;
+                
+                const innerX = Math.cos(angle) * innerRadius;
+                const innerY = Math.sin(angle) * innerRadius;
                 const outerX = Math.cos(angle) * outerRadius;
                 const outerY = Math.sin(angle) * outerRadius;
-                
-                ctx.beginPath();
-                ctx.moveTo(innerX, innerY);
-                ctx.lineTo(outerX, outerY);
-                ctx.stroke();
-            }
-        } else {
-            // Draw static radial lines
-            for (let i = 0; i < this.lineCount; i++) {
-                const angle = (i / this.lineCount) * 2 * Math.PI;
-                const innerX = Math.cos(angle) * this.innerRadius;
-                const innerY = Math.sin(angle) * this.innerRadius;
-                const outerX = Math.cos(angle) * this.outerRadius;
-                const outerY = Math.sin(angle) * this.outerRadius;
                 
                 ctx.beginPath();
                 ctx.moveTo(innerX, innerY);
@@ -479,7 +459,6 @@ class RadialVisualizer extends BaseVisualizer {
 class ParticleVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.particleColor = '#00d4ff';
         this.particleCount = 50;
         this.particleSize = 3;
         this.particles = [];
@@ -536,10 +515,8 @@ class ParticleVisualizer extends BaseVisualizer {
             // Keep in bounds
             particle.x = Utils.clamp(particle.x, -this.width/2, this.width/2);
             particle.y = Utils.clamp(particle.y, -this.height/2, this.height/2);
-        });
-
-        // Draw particles
-        ctx.fillStyle = this.particleColor;
+        });        // Draw particles
+        ctx.fillStyle = this.color;
         this.particles.forEach(particle => {
             const size = this.particleSize * (0.5 + particle.life * 0.5);
             ctx.globalAlpha = this.opacity * particle.life;
@@ -555,7 +532,6 @@ class ParticleVisualizer extends BaseVisualizer {
 class SpectrumVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.spectrumColor = '#00d4ff';
         this.binCount = 128;
         this.logScale = true;
         this.gradient = true;
@@ -581,13 +557,12 @@ class SpectrumVisualizer extends BaseVisualizer {
 
         if (this.frequencyData && this.frequencyData.length > 0) {
             const binWidth = bounds.width / this.binCount;
-            
-            // Create gradient if enabled
-            let fillStyle = this.spectrumColor;
+              // Create gradient if enabled
+            let fillStyle = this.color;
             if (this.gradient) {
                 const gradient = ctx.createLinearGradient(bounds.x, bounds.y + bounds.height, bounds.x, bounds.y);
-                gradient.addColorStop(0, this.spectrumColor + '80');
-                gradient.addColorStop(1, this.spectrumColor);
+                gradient.addColorStop(0, this.color + '80');
+                gradient.addColorStop(1, this.color);
                 fillStyle = gradient;
             }
             

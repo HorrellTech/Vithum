@@ -293,23 +293,34 @@ body {
     justify-content: space-between;
 }
 
+.canvas-controls-left,
+.canvas-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
 .zoom-level {
     font-size: 14px;
     color: #888;
 }
 
-.canvas-size {
+.canvas-size,
+.video-area-controls {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     font-size: 14px;
 }
 
-.canvas-size label {
+.canvas-size label,
+.video-area-controls label {
     color: #888;
+    font-weight: 500;
 }
 
-.canvas-size input {
+.canvas-size input,
+.video-area-controls input {
     width: 80px;
     padding: 4px 8px;
     background: rgba(255, 255, 255, 0.1);
@@ -317,6 +328,37 @@ body {
     border-radius: 4px;
     color: #fff;
     font-size: 14px;
+}
+
+.canvas-size span,
+.video-area-controls span {
+    color: #888;
+    font-weight: bold;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-small:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-small.active {
+    background: #00d4ff;
+    border-color: #00d4ff;
+    color: #000;
 }
 
 /* Right Panel Styles */
@@ -498,6 +540,55 @@ body {
     transform: rotate(5deg);
 }
 
+/* Layer Controls */
+.layer-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.shortcuts-info {
+    font-size: 12px;
+    color: #888;
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.shortcut-item kbd {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: monospace;
+    color: #fff;
+}
+
+.shortcut-item span {
+    flex: 1;
+    font-size: 11px;
+}
+
+.cycling-notification {
+    animation: slideInFromTop 0.2s ease-out;
+}
+
+@keyframes slideInFromTop {
+    from {
+        transform: translate(-50%, -20px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .left-panel, .right-panel {
@@ -523,4 +614,222 @@ body {
     .left-panel, .right-panel {
         width: 200px;
     }
+}
+
+/* Add after existing panel styles */
+
+/* Panel Toggle Buttons */
+.panel-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.panel-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Panel States */
+.left-panel.collapsed {
+    width: 40px;
+    min-width: 40px;
+}
+
+.left-panel.collapsed .visualizer-library,
+.left-panel.collapsed .panel-header h3 {
+    display: none;
+}
+
+.left-panel.collapsed .panel-toggle {
+    margin: 0 auto;
+}
+
+.right-panel.collapsed {
+    width: 40px;
+    min-width: 40px;
+}
+
+.right-panel.collapsed .properties-content,
+.right-panel.collapsed .panel-header h3 {
+    display: none;
+}
+
+.right-panel.collapsed .panel-toggle {
+    margin: 0 auto;
+}
+
+/* Bottom Panel */
+.bottom-panel {
+    height: 60px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    position: relative;
+    transition: height 0.3s ease;
+}
+
+.bottom-panel.collapsed {
+    height: 30px;
+}
+
+.bottom-panel.collapsed .audio-timeline {
+    display: none;
+}
+
+.audio-timeline {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+}
+
+.timeline-info {
+    color: #888;
+    font-size: 12px;
+    font-family: monospace;
+    min-width: 40px;
+}
+
+.timeline-track {
+    flex: 1;
+    position: relative;
+    height: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.progress-slider {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.progress-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.progress-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-markers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.timeline-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.bottom-toggle {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 15px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Adjust main content height */
+.main-content {
+    height: calc(100vh - 120px); /* Account for top toolbar and bottom panel */
+}
+
+/* Panel transitions */
+.left-panel, .right-panel {
+    transition: width 0.3s ease;
+}
+
+/* Update resize handle positions */
+.resize-left {
+    transition: left 0.3s ease;
+}
+
+.resize-right {
+    transition: right 0.3s ease;
+}
+
+/* Add after existing layer controls */
+
+.visibility-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.btn-small.locked {
+    background: rgba(255, 107, 53, 0.2);
+    border-color: rgba(255, 107, 53, 0.4);
+    color: #ff6b35;
+}
+
+.btn-small.locked:hover {
+    background: rgba(255, 107, 53, 0.3);
+    border-color: rgba(255, 107, 53, 0.6);
+}
+
+.property-item label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.property-item label input[type="checkbox"] {
+    margin: 0;
+}
+
+.range-value {
+    font-size: 12px;
+    color: #888;
+    margin-left: 8px;
 }

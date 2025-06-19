@@ -64,9 +64,12 @@
         <!-- Main Content -->
         <div class="main-content">
             <!-- Left Panel - Visualizer Library -->
-            <div class="left-panel">
+            <div class="left-panel" id="leftPanel">
                 <div class="panel-header">
                     <h3>Visualizers</h3>
+                    <button class="panel-toggle" id="leftPanelToggle">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
                 </div>
                 <div class="visualizer-library">
                     <div class="visualizer-category">
@@ -131,22 +134,40 @@
                             <p>Drag visualizers here or click to add</p>
                         </div>
                     </div>
-                </div>
-                <div class="canvas-controls">
-                    <div class="zoom-level">Zoom: <span id="zoomLevel">100%</span></div>
-                    <div class="canvas-size">
-                        <label>Width:</label>
-                        <input type="number" id="canvasWidth" value="1920" min="400">
-                        <label>Height:</label>
-                        <input type="number" id="canvasHeight" value="1080" min="300">
+                </div>                <div class="canvas-controls">
+                    <div class="canvas-controls-left">
+                        <div class="zoom-level">Zoom: <span id="zoomLevel">100%</span></div>
+                        <div class="canvas-size">
+                            <label>Canvas:</label>
+                            <input type="number" id="canvasWidth" value="1920" min="400">
+                            <span>×</span>
+                            <input type="number" id="canvasHeight" value="1080" min="300">
+                        </div>
+                    </div>
+                    <div class="canvas-controls-right">
+                        <div class="video-area-controls">
+                            <label>Video Area:</label>
+                            <input type="number" id="videoAreaWidth" value="1280" min="400">
+                            <span>×</span>
+                            <input type="number" id="videoAreaHeight" value="720" min="300">
+                            <button class="btn-small" id="toggleVideoArea">
+                                <i class="fas fa-video"></i> Show Area
+                            </button>
+                            <button class="btn-small" id="centerVideoArea">
+                                <i class="fas fa-crosshairs"></i> Center
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Right Panel - Properties -->
-            <div class="right-panel">
+            <div class="right-panel" id="rightPanel">
                 <div class="panel-header">
                     <h3>Properties</h3>
+                    <button class="panel-toggle" id="rightPanelToggle">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
                 <div class="properties-content" id="propertiesContent">
                     <div class="no-selection">
@@ -157,9 +178,24 @@
             </div>
         </div>
 
-        <!-- Resize Handles -->
-        <div class="resize-handle resize-left" data-resize="left"></div>
-        <div class="resize-handle resize-right" data-resize="right"></div>
+        <!-- Bottom Panel -->
+        <div class="bottom-panel" id="bottomPanel">
+            <div class="audio-timeline">
+                <div class="timeline-info">
+                    <span id="currentTime">0:00</span>
+                </div>
+                <div class="timeline-track">
+                    <input type="range" id="progressBar" min="0" max="100" value="0" class="progress-slider">
+                    <div class="timeline-markers" id="timelineMarkers"></div>
+                </div>
+                <div class="timeline-info">
+                    <span id="totalTime">0:00</span>
+                </div>
+            </div>
+            <button class="panel-toggle bottom-toggle" id="bottomPanelToggle">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
     </div>
 
     <!-- Audio Context -->
