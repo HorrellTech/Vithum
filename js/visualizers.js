@@ -771,6 +771,15 @@ class PlasmaVisualizer extends BaseVisualizer {
         this.gridSize = 8;
     }
 
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 212, b: 255 }; // Default to cyan if parsing fails
+    }
+
     render(ctx) {
         if (!this.visible) return;
 
@@ -799,21 +808,21 @@ class PlasmaVisualizer extends BaseVisualizer {
 
         for (let x = 0; x < this.width; x += this.gridSize) {
             for (let y = 0; y < this.height; y += this.gridSize) {
-                const normalizedX = (x - this.width / 2) / this.width;
-                const normalizedY = (y - this.height / 2) / this.height;
-
+                const normalizedX = (x - this.width/2) / this.width;
+                const normalizedY = (y - this.height/2) / this.height;
+                
                 const plasma = Math.sin(normalizedX * 10 + this.timeOffset * this.frequency1) +
-                    Math.sin(normalizedY * 10 + this.timeOffset * this.frequency2) +
-                    Math.sin((normalizedX + normalizedY) * 10 + this.timeOffset * 0.025);
-
+                              Math.sin(normalizedY * 10 + this.timeOffset * this.frequency2) +
+                              Math.sin((normalizedX + normalizedY) * 10 + this.timeOffset * 0.025);
+                
                 const intensity = ((plasma + 3) / 6) * 255 * audioInfluence;
-
+                
                 // Convert color to RGB
                 const color = this.hexToRgb(this.color);
                 const r = Math.floor(color.r * intensity / 255);
                 const g = Math.floor(color.g * intensity / 255);
                 const b = Math.floor(color.b * intensity / 255);
-
+                
                 // Fill grid area
                 for (let dx = 0; dx < this.gridSize && x + dx < this.width; dx++) {
                     for (let dy = 0; dy < this.gridSize && y + dy < this.height; dy++) {
@@ -829,12 +838,13 @@ class PlasmaVisualizer extends BaseVisualizer {
 
         // Put the image data on the temporary canvas
         tempCtx.putImageData(imageData, 0, 0);
-
+        
         // Draw the temporary canvas to the main canvas with proper positioning
-        ctx.drawImage(tempCanvas, -this.width / 2, -this.height / 2);
+        ctx.drawImage(tempCanvas, -this.width/2, -this.height/2);
 
         ctx.restore();
     }
+}
 
 class NetworkVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
@@ -927,13 +937,14 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
         this.patternSize = 20;
         this.rotationSpeed = 1;
         this.currentRotation = 0;
+        this.mirrorAlternate = true;
     }
 
     render(ctx) {
         if (!this.visible) return;
 
         ctx.save();
-
+        
         const center = this.getCenter();
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
@@ -948,7 +959,12 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
         for (let segment = 0; segment < this.segments; segment++) {
             ctx.save();
             ctx.rotate(segment * segmentAngle);
-
+            
+            // Alternate mirroring for true kaleidoscope effect
+            if (this.mirrorAlternate && segment % 2 === 1) {
+                ctx.scale(1, -1);
+            }
+            
             // Create clipping path for segment
             ctx.beginPath();
             ctx.moveTo(0, 0);
@@ -958,7 +974,7 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
 
             // Draw pattern
             this.drawPattern(ctx, maxRadius);
-
+            
             ctx.restore();
         }
 
@@ -970,31 +986,438 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
         ctx.rotate(Utils.toRadians(this.currentRotation));
 
         let audioScale = 1;
+        let audioHue = 0;
         if (this.frequencyData && this.reactToAudio) {
             audioScale = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity * 0.5;
+            audioHue = (Utils.average(this.frequencyData) / 255) * 360;
         }
 
-        ctx.fillStyle = this.color;
-        ctx.strokeStyle = this.color;
         ctx.lineWidth = 2;
 
-        for (let r = this.patternSize; r < maxRadius; r += this.patternSize * 2) {
-            for (let angle = 0; angle < 360; angle += 45) {
+        for (let r = this.patternSize; r < maxRadius; r += this.patternSize * 1.5) {
+            for (let angle = 0; angle < 180; angle += 30) { // Only half circle for mirroring
                 const x = Math.cos(Utils.toRadians(angle)) * r * audioScale;
                 const y = Math.sin(Utils.toRadians(angle)) * r * audioScale;
 
+                // Color cycling with audio
+                const hue = (angle + this.currentRotation + audioHue) % 360;
+                const color = `hsl(${hue}, 70%, 60%)`;
+                
+                ctx.fillStyle = color;
+                ctx.strokeStyle = color;
+
                 if (this.innerPattern === 'circle') {
                     ctx.beginPath();
-                    ctx.arc(x, y, this.patternSize * 0.3, 0, 2 * Math.PI);
+                    ctx.arc(x, y, this.patternSize * 0.4 * audioScale, 0, 2 * Math.PI);
                     ctx.fill();
                 } else if (this.innerPattern === 'square') {
-                    const size = this.patternSize * 0.6;
-                    ctx.fillRect(x - size / 2, y - size / 2, size, size);
+                    const size = this.patternSize * 0.8 * audioScale;
+                    ctx.fillRect(x - size/2, y - size/2, size, size);
+                } else if (this.innerPattern === 'triangle') {
+                    const size = this.patternSize * 0.6 * audioScale;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - size);
+                    ctx.lineTo(x - size, y + size/2);
+                    ctx.lineTo(x + size, y + size/2);
+                    ctx.closePath();
+                    ctx.fill();
                 }
             }
         }
 
         ctx.restore();
+    }
+}
+
+class GalaxyVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.starCount = 100;
+        this.armCount = 3;
+        this.rotationSpeed = 0.5;
+        this.currentRotation = 0;
+        this.stars = [];
+        this.initStars();
+    }
+
+    initStars() {
+        this.stars = [];
+        for (let i = 0; i < this.starCount; i++) {
+            this.stars.push({
+                angle: Math.random() * 2 * Math.PI,
+                distance: Math.random() * 0.8,
+                speed: 0.5 + Math.random() * 0.5,
+                size: 1 + Math.random() * 3,
+                brightness: Math.random()
+            });
+        }
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.currentRotation += this.rotationSpeed * this.animationSpeed;
+        const maxRadius = Math.min(this.width, this.height) / 2;
+
+        let audioBoost = 1;
+        if (this.frequencyData && this.reactToAudio) {
+            audioBoost = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity;
+        }
+
+        // Draw galaxy arms
+        ctx.strokeStyle = this.color + '40';
+        ctx.lineWidth = 3;
+        
+        for (let arm = 0; arm < this.armCount; arm++) {
+            ctx.beginPath();
+            const armOffset = (arm / this.armCount) * 2 * Math.PI;
+            
+            for (let r = 0; r <= maxRadius; r += 5) {
+                const spiralAngle = armOffset + (r / maxRadius) * 6 * Math.PI + Utils.toRadians(this.currentRotation);
+                const x = Math.cos(spiralAngle) * r * audioBoost;
+                const y = Math.sin(spiralAngle) * r * audioBoost;
+                
+                if (r === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // Draw and update stars
+        this.stars.forEach(star => {
+            star.angle += star.speed * this.animationSpeed * 0.01;
+            star.brightness = Math.sin(Date.now() * 0.001 + star.angle) * 0.5 + 0.5;
+            
+            const spiralAngle = star.angle + (star.distance * 4) + Utils.toRadians(this.currentRotation);
+            const x = Math.cos(spiralAngle) * star.distance * maxRadius * audioBoost;
+            const y = Math.sin(spiralAngle) * star.distance * maxRadius * audioBoost;
+            
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = this.opacity * star.brightness;
+            ctx.beginPath();
+            ctx.arc(x, y, star.size * audioBoost, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+
+        ctx.restore();
+    }
+}
+
+class DNAVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.helixTurns = 4;
+        this.helixSpeed = 2;
+        this.currentOffset = 0;
+        this.baseCount = 20;
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.currentOffset += this.helixSpeed * this.animationSpeed;
+
+        let audioAmplitude = 1;
+        if (this.frequencyData && this.reactToAudio) {
+            audioAmplitude = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity;
+        }
+
+        const helixRadius = Math.min(this.width, this.height) / 6;
+        const helixHeight = this.height;
+
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 3;
+
+        // Draw the two DNA strands
+        for (let strand = 0; strand < 2; strand++) {
+            ctx.beginPath();
+            const strandOffset = strand * Math.PI;
+            
+            for (let y = -helixHeight/2; y <= helixHeight/2; y += 2) {
+                const normalizedY = y / (helixHeight/2);
+                const angle = normalizedY * this.helixTurns * Math.PI + strandOffset + Utils.toRadians(this.currentOffset);
+                const x = Math.cos(angle) * helixRadius * audioAmplitude;
+                
+                if (y === -helixHeight/2) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // Draw connecting bases
+        ctx.strokeStyle = this.color + '80';
+        ctx.lineWidth = 2;
+        
+        for (let i = 0; i < this.baseCount; i++) {
+            const y = -helixHeight/2 + (i / this.baseCount) * helixHeight;
+            const normalizedY = (y + helixHeight/2) / helixHeight;
+            const angle = normalizedY * this.helixTurns * Math.PI + Utils.toRadians(this.currentOffset);
+            
+            const x1 = Math.cos(angle) * helixRadius * audioAmplitude;
+            const x2 = Math.cos(angle + Math.PI) * helixRadius * audioAmplitude;
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y);
+            ctx.lineTo(x2, y);
+            ctx.stroke();
+            
+            // Draw base pairs
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(x1, y, 3, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(x2, y, 3, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+}
+
+class FlowerVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.petalCount = 8;
+        this.petalLayers = 3;
+        this.bloomSpeed = 1;
+        this.currentBloom = 0;
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.currentBloom += this.bloomSpeed * this.animationSpeed;
+
+        let audioScale = 1;
+        if (this.frequencyData && this.reactToAudio) {
+            audioScale = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity * 0.5;
+        }
+
+        const maxRadius = Math.min(this.width, this.height) / 2;
+
+        // Draw petal layers
+        for (let layer = 0; layer < this.petalLayers; layer++) {
+            const layerRadius = maxRadius * (0.3 + layer * 0.3) * audioScale;
+            const layerAlpha = 0.8 - layer * 0.2;
+            const angleOffset = (layer * 45) + this.currentBloom;
+
+            ctx.globalAlpha = this.opacity * layerAlpha;
+
+            for (let petal = 0; petal < this.petalCount; petal++) {
+                const angle = (petal / this.petalCount) * 2 * Math.PI + Utils.toRadians(angleOffset);
+                
+                // Create petal shape using curves
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                
+                const petalLength = layerRadius;
+                const petalWidth = layerRadius * 0.3;
+                
+                // Petal curve
+                const controlX1 = Math.cos(angle - 0.3) * petalLength * 0.6;
+                const controlY1 = Math.sin(angle - 0.3) * petalLength * 0.6;
+                const controlX2 = Math.cos(angle + 0.3) * petalLength * 0.6;
+                const controlY2 = Math.sin(angle + 0.3) * petalLength * 0.6;
+                const tipX = Math.cos(angle) * petalLength;
+                const tipY = Math.sin(angle) * petalLength;
+                
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(controlX1, controlY1, tipX, tipY);
+                ctx.quadraticCurveTo(controlX2, controlY2, 0, 0);
+                ctx.fill();
+            }
+        }
+
+        // Draw center
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        ctx.arc(0, 0, maxRadius * 0.15 * audioScale, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.restore();
+    }
+}
+
+class TunnelVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.rings = 20;
+        this.tunnelSpeed = 3;
+        this.currentDepth = 0;
+        this.perspective = 0.8;
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.currentDepth += this.tunnelSpeed * this.animationSpeed;
+
+        let audioWarp = 1;
+        if (this.frequencyData && this.reactToAudio) {
+            audioWarp = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity * 0.3;
+        }
+
+        const maxRadius = Math.min(this.width, this.height) / 2;
+
+        // Draw tunnel rings
+        for (let ring = 0; ring < this.rings; ring++) {
+            const depth = (ring + (this.currentDepth % 1)) / this.rings;
+            const scale = this.perspective + (1 - this.perspective) * (1 - depth);
+            const alpha = 1 - depth;
+            
+            const ringRadius = maxRadius * scale * audioWarp;
+            const ringRotation = this.currentDepth * 10 + ring * 20;
+            
+            ctx.save();
+            ctx.rotate(Utils.toRadians(ringRotation));
+            ctx.globalAlpha = this.opacity * alpha;
+            
+            // Draw ring segments
+            const segments = 12;
+            for (let seg = 0; seg < segments; seg++) {
+                const segAngle = (seg / segments) * 2 * Math.PI;
+                const x1 = Math.cos(segAngle) * ringRadius * 0.8;
+                const y1 = Math.sin(segAngle) * ringRadius * 0.8;
+                const x2 = Math.cos(segAngle) * ringRadius;
+                const y2 = Math.sin(segAngle) * ringRadius;
+                
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 3 * scale;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+}
+
+class FractalTreeVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.maxDepth = 6;
+        this.branchAngle = 25;
+        this.branchRatio = 0.7;
+        this.windEffect = 0;
+        this.growthPhase = 0;
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.windEffect += this.animationSpeed;
+        this.growthPhase += this.animationSpeed * 0.5;
+
+        let audioGrowth = 1;
+        if (this.frequencyData && this.reactToAudio) {
+            audioGrowth = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity * 0.5;
+        }
+
+        const trunkLength = this.height * 0.3 * audioGrowth;
+        
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 8;
+        
+        // Start drawing from bottom center
+        ctx.translate(0, this.height/2);
+        this.drawBranch(ctx, 0, 0, -90, trunkLength, this.maxDepth, audioGrowth);
+
+        ctx.restore();
+    }
+
+    drawBranch(ctx, x, y, angle, length, depth, audioGrowth) {
+        if (depth === 0 || length < 2) return;
+
+        const windSway = Math.sin(this.windEffect * 0.02 + depth) * (8 - depth) * 2;
+        const actualAngle = angle + windSway;
+        
+        const endX = x + Math.cos(Utils.toRadians(actualAngle)) * length;
+        const endY = y + Math.sin(Utils.toRadians(actualAngle)) * length;
+
+        // Growth animation
+        const growthFactor = Math.min(1, (this.growthPhase - (this.maxDepth - depth) * 0.5) / 2);
+        if (growthFactor <= 0) return;
+
+        const actualEndX = x + (endX - x) * growthFactor;
+        const actualEndY = y + (endY - y) * growthFactor;
+
+        // Draw branch
+        ctx.save();
+        ctx.lineWidth = Math.max(1, depth * 1.5);
+        ctx.globalAlpha = this.opacity * (0.5 + depth * 0.1);
+        
+        // Color variation by depth
+        const hue = (depth * 30 + this.windEffect) % 360;
+        ctx.strokeStyle = `hsl(${hue}, 60%, 50%)`;
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(actualEndX, actualEndY);
+        ctx.stroke();
+        ctx.restore();
+
+        if (growthFactor >= 1) {
+            // Draw child branches
+            const newLength = length * this.branchRatio;
+            const leftAngle = actualAngle - this.branchAngle;
+            const rightAngle = actualAngle + this.branchAngle;
+            
+            this.drawBranch(ctx, endX, endY, leftAngle, newLength, depth - 1, audioGrowth);
+            this.drawBranch(ctx, endX, endY, rightAngle, newLength, depth - 1, audioGrowth);
+        }
     }
 }
 
@@ -1028,6 +1451,16 @@ class VisualizerFactory {
                 return new NetworkVisualizer(x, y, width, height);
             case 'kaleidoscope':
                 return new KaleidoscopeVisualizer(x, y, width, height);
+            case 'galaxy':
+                return new GalaxyVisualizer(x, y, width, height);
+            case 'dna':
+                return new DNAVisualizer(x, y, width, height);
+            case 'flower':
+                return new FlowerVisualizer(x, y, width, height);
+            case 'tunnel':
+                return new TunnelVisualizer(x, y, width, height);
+            case 'fractaltree':
+                return new FractalTreeVisualizer(x, y, width, height);
             default:
                 throw new Error(`Unknown visualizer type: ${type}`);
         }
@@ -1050,3 +1483,9 @@ window.VortexVisualizer = VortexVisualizer;
 window.PlasmaVisualizer = PlasmaVisualizer;
 window.NetworkVisualizer = NetworkVisualizer;
 window.KaleidoscopeVisualizer = KaleidoscopeVisualizer;
+
+window.GalaxyVisualizer = GalaxyVisualizer;
+window.DNAVisualizer = DNAVisualizer;
+window.FlowerVisualizer = FlowerVisualizer;
+window.TunnelVisualizer = TunnelVisualizer;
+window.FractalTreeVisualizer = FractalTreeVisualizer;

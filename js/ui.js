@@ -117,6 +117,15 @@ class UIManager {
         }
     }
 
+    formatTime(seconds) {
+        if (isNaN(seconds) || seconds === 0) return '0:00';
+        
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
     handleLeftResize(e) {
         if (!this.isResizingLeft || this.leftPanelCollapsed) return;
 
@@ -325,7 +334,12 @@ class UIManager {
             { type: 'vortex', name: 'Vortex', icon: 'fas fa-tornado', description: 'Rotating spiral arms' },
             { type: 'plasma', name: 'Plasma', icon: 'fas fa-fire', description: 'Smooth plasma effects' },
             { type: 'network', name: 'Network', icon: 'fas fa-project-diagram', description: 'Connected node network' },
-            { type: 'kaleidoscope', name: 'Kaleidoscope', icon: 'fas fa-gem', description: 'Symmetrical kaleidoscope patterns' }
+            { type: 'kaleidoscope', name: 'Kaleidoscope', icon: 'fas fa-gem', description: 'Symmetrical kaleidoscope patterns' },
+            { type: 'galaxy', name: 'Galaxy', icon: 'fas fa-star', description: 'Spiral galaxy with rotating stars' },
+            { type: 'dna', name: 'DNA Helix', icon: 'fas fa-dna', description: 'Double helix DNA structure' },
+            { type: 'flower', name: 'Flower', icon: 'fas fa-seedling', description: 'Blooming flower petals' },
+            { type: 'tunnel', name: 'Tunnel', icon: 'fas fa-circle-notch', description: '3D tunnel effect' },
+            { type: 'fractaltree', name: 'Fractal Tree', icon: 'fas fa-tree', description: 'Growing fractal tree branches' }
         ];
 
         libraryContainer.innerHTML = `
@@ -385,7 +399,12 @@ class UIManager {
             'vortex': 'advanced',
             'plasma': 'advanced',
             'network': 'advanced',
-            'kaleidoscope': 'advanced'
+            'kaleidoscope': 'advanced',
+            'galaxy': 'effects',
+            'dna': 'effects',
+            'flower': 'effects',
+            'tunnel': 'effects',
+            'fractaltree': 'effects'
         };
         return categories[type] || 'basic';
     }
