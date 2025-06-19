@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vithum - Audio Visualizer Studio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="logo">
+                    <i class="fas fa-wave-square"></i>
+                    <span>Vithum Studio</span>
+                </div>
+                <div class="toolbar-actions">
+                    <button class="btn" id="newProject">
+                        <i class="fas fa-file"></i> New
+                    </button>
+                    <button class="btn" id="openProject">
+                        <i class="fas fa-folder-open"></i> Open
+                    </button>
+                    <button class="btn" id="saveProject">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button class="btn" id="exportProject">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+            <div class="toolbar-center">
+                <div class="playback-controls">
+                    <button class="btn-icon" id="playPause">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="btn-icon" id="stop">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                    <input type="file" id="audioFile" accept="audio/*" style="display: none;">
+                    <button class="btn" id="loadAudio">
+                        <i class="fas fa-music"></i> Load Audio
+                    </button>
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <div class="view-controls">
+                    <button class="btn-icon" id="zoomIn">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="btn-icon" id="zoomOut">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="btn-icon" id="resetZoom">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel - Visualizer Library -->
+            <div class="left-panel">
+                <div class="panel-header">
+                    <h3>Visualizers</h3>
+                </div>
+                <div class="visualizer-library">
+                    <div class="visualizer-category">
+                        <h4>Basic</h4>
+                        <div class="visualizer-item" data-type="waveform" draggable="true">
+                            <div class="visualizer-preview">
+                                <i class="fas fa-wave-square"></i>
+                            </div>
+                            <span>Waveform</span>
+                        </div>
+                        <div class="visualizer-item" data-type="frequency" draggable="true">
+                            <div class="visualizer-preview">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <span>Frequency Bars</span>
+                        </div>
+                        <div class="visualizer-item" data-type="circle" draggable="true">
+                            <div class="visualizer-preview">
+                                <i class="fas fa-circle"></i>
+                            </div>
+                            <span>Circle</span>
+                        </div>
+                        <div class="visualizer-item" data-type="spiral" draggable="true">
+                            <div class="visualizer-preview">
+                                <i class="fas fa-hurricane"></i>
+                            </div>
+                            <span>Spiral</span>
+                        </div>
+                    </div>
+                    <div class="visualizer-category">
+                        <h4>Advanced</h4>
+                        <div class="visualizer-item" data-type="radial" draggable="true">
+                            <div class="visualizer-preview">
+                                <i class="fas fa-dot-circle"></i>
+                            </div>
+                            <span>Radial</span>
+                        </div>
+                        <div class="visualizer-item" data-type="particles" draggable="true">
+                            <div class="visualizer-preview">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <span>Particles</span>
+                        </div>
+                        <div class="visualizer-item" data-type="spectrum" draggable="true">
+                            <div class="visualizer-preview">
+                                <i class="fas fa-signal"></i>
+                            </div>
+                            <span>Spectrum</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Canvas Area -->
+            <div class="canvas-container">
+                <div class="canvas-wrapper" id="canvasWrapper">
+                    <canvas id="mainCanvas"></canvas>
+                    <div class="canvas-overlay" id="canvasOverlay"></div>
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-content">
+                            <i class="fas fa-plus"></i>
+                            <p>Drag visualizers here or click to add</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-controls">
+                    <div class="zoom-level">Zoom: <span id="zoomLevel">100%</span></div>
+                    <div class="canvas-size">
+                        <label>Width:</label>
+                        <input type="number" id="canvasWidth" value="1920" min="400">
+                        <label>Height:</label>
+                        <input type="number" id="canvasHeight" value="1080" min="300">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Properties -->
+            <div class="right-panel">
+                <div class="panel-header">
+                    <h3>Properties</h3>
+                </div>
+                <div class="properties-content" id="propertiesContent">
+                    <div class="no-selection">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <p>Select a visualizer to edit properties</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resize Handles -->
+        <div class="resize-handle resize-left" data-resize="left"></div>
+        <div class="resize-handle resize-right" data-resize="right"></div>
+    </div>
+
+    <!-- Audio Context -->
+    <audio id="audioElement" style="display: none;"></audio>
+
+    <script src="js/utils.js"></script>
+    <script src="js/visualizers.js"></script>
+    <script src="js/canvas.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
