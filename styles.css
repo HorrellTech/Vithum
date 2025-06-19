@@ -833,3 +833,71 @@ body {
     color: #888;
     margin-left: 8px;
 }
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+::-webkit-scrollbar-corner {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
+/* Improved Resize Handles */
+.resize-handle {
+    position: absolute;
+    top: 60px; /* Account for toolbar height */
+    bottom: 60px; /* Account for bottom panel */
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 1001;
+    transition: background 0.2s ease;
+}
+
+.resize-handle:hover {
+    background: rgba(0, 212, 255, 0.4);
+}
+
+.resize-handle:active {
+    background: rgba(0, 212, 255, 0.6);
+}
+
+.resize-left {
+    left: calc(var(--left-panel-width, 280px) - 2px);
+}
+
+.resize-right {
+    right: calc(var(--right-panel-width, 300px) - 2px);
+}
+
+/* Panel width CSS variables for dynamic updating */
+.left-panel {
+    width: var(--left-panel-width, 280px);
+}
+
+.right-panel {
+    width: var(--right-panel-width, 300px);
+}

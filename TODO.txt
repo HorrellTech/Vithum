@@ -1,0 +1,3 @@
+- Add more visualizers
+- Add motion blur
+- Add glow effect

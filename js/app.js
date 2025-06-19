@@ -36,9 +36,13 @@ class VithumApp {
             this.canvas = new CanvasManager();
             this.ui = new UIManager();
             
-            // Initialize UI
-            this.ui.init();
+            // Make UI available globally for onclick handlers
+            window.ui = this.ui;
             
+            // Initialize UI
+            this.ui = new UIManager();
+            this.ui.populateVisualizerLibrary(); // Ensure this is called
+                    
             // Start main animation loop
             this.startAnimationLoop();
             

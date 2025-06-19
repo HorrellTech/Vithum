@@ -9,11 +9,42 @@ class UIManager {
         this.bottomPanelCollapsed = false;
         this.isResizingLeft = false;
         this.isResizingRight = false;
+        this.currentCategory = 'all';
 
+        this.initializePanelSizes();
         this.bindEvents();
-        this.initializeDragAndDrop();
         this.setupPanelToggles();
         this.setupAudioTimeline();
+        this.populateVisualizerLibrary();
+        this.initializeDragAndDrop();
+    }
+
+    initializePanelSizes() {
+        // Set CSS custom properties for panel widths
+        document.documentElement.style.setProperty('--left-panel-width', this.leftPanelWidth + 'px');
+        document.documentElement.style.setProperty('--right-panel-width', this.rightPanelWidth + 'px');
+        
+        // Apply initial panel widths
+        const leftPanel = document.querySelector('.left-panel');
+        const rightPanel = document.querySelector('.right-panel');
+        const leftHandle = document.querySelector('.resize-left');
+        const rightHandle = document.querySelector('.resize-right');
+
+        if (leftPanel) {
+            leftPanel.style.width = this.leftPanelWidth + 'px';
+        }
+        
+        if (rightPanel) {
+            rightPanel.style.width = this.rightPanelWidth + 'px';
+        }
+        
+        if (leftHandle) {
+            leftHandle.style.left = (this.leftPanelWidth - 2) + 'px';
+        }
+        
+        if (rightHandle) {
+            rightHandle.style.right = (this.rightPanelWidth - 2) + 'px';
+        }
     }
 
     bindEvents() {
@@ -272,7 +303,177 @@ class UIManager {
 
         // Bind property change events
         this.bindPropertyEvents(visualizer);
-    } bindPropertyEvents(visualizer) {
+    } 
+    
+    populateVisualizerLibrary() {
+        const libraryContainer = document.getElementById('visualizerLibrary');
+        if (!libraryContainer) return;
+
+        const visualizers = [
+            // Basic visualizers
+            { type: 'waveform', name: 'Waveform', icon: 'fas fa-wave-square', description: 'Audio waveform display' },
+            { type: 'frequency', name: 'Frequency Bars', icon: 'fas fa-chart-bar', description: 'Frequency spectrum bars' },
+            { type: 'circle', name: 'Circle', icon: 'fas fa-circle', description: 'Pulsing circle visualizer' },
+            { type: 'spiral', name: 'Spiral', icon: 'fas fa-hurricane', description: 'Animated spiral pattern' },
+            { type: 'radial', name: 'Radial', icon: 'fas fa-sun', description: 'Radial frequency lines' },
+            { type: 'spectrum', name: 'Spectrum', icon: 'fas fa-signal', description: 'Gradient spectrum analyzer' },
+            
+            // Advanced visualizers
+            { type: 'particles', name: 'Particles', icon: 'fas fa-atom', description: 'Animated particle system' },
+            { type: 'wave', name: 'Wave Layers', icon: 'fas fa-water', description: 'Layered wave patterns' },
+            { type: 'lissajous', name: 'Lissajous', icon: 'fas fa-infinity', description: 'Mathematical curves with trails' },
+            { type: 'vortex', name: 'Vortex', icon: 'fas fa-tornado', description: 'Rotating spiral arms' },
+            { type: 'plasma', name: 'Plasma', icon: 'fas fa-fire', description: 'Smooth plasma effects' },
+            { type: 'network', name: 'Network', icon: 'fas fa-project-diagram', description: 'Connected node network' },
+            { type: 'kaleidoscope', name: 'Kaleidoscope', icon: 'fas fa-gem', description: 'Symmetrical kaleidoscope patterns' }
+        ];
+
+        libraryContainer.innerHTML = `
+            <div class="library-header">
+                <h3>Visualizer Library</h3>
+                <div class="library-search">
+                    <input type="text" id="visualizerSearch" placeholder="Search visualizers..." class="search-input">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div class="library-categories">
+                <button class="category-btn active" data-category="all">All</button>
+                <button class="category-btn" data-category="basic">Basic</button>
+                <button class="category-btn" data-category="advanced">Advanced</button>
+                <button class="category-btn" data-category="effects">Effects</button>
+            </div>
+            <div class="visualizer-grid" id="visualizerGrid">
+                ${visualizers.map(viz => `
+                    <div class="visualizer-item" 
+                        data-type="${viz.type}" 
+                        data-category="${this.getVisualizerCategory(viz.type)}"
+                        draggable="true" 
+                        title="${viz.description}">
+                        <div class="visualizer-preview">
+                            <i class="${viz.icon}"></i>
+                        </div>
+                        <div class="visualizer-info">
+                            <span class="visualizer-name">${viz.name}</span>
+                            <span class="visualizer-desc">${viz.description}</span>
+                        </div>
+                        <div class="visualizer-actions">
+                            <button class="add-btn" onclick="window.ui.addVisualizerFromLibrary('${viz.type}')">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // Re-initialize drag and drop for new elements
+        this.initializeDragAndDrop();
+        this.setupLibraryFiltering();
+    }
+
+    getVisualizerCategory(type) {
+        const categories = {
+            'waveform': 'basic',
+            'frequency': 'basic', 
+            'circle': 'basic',
+            'spiral': 'basic',
+            'radial': 'basic',
+            'spectrum': 'basic',
+            'particles': 'advanced',
+            'wave': 'advanced',
+            'lissajous': 'advanced',
+            'vortex': 'advanced',
+            'plasma': 'advanced',
+            'network': 'advanced',
+            'kaleidoscope': 'advanced'
+        };
+        return categories[type] || 'basic';
+    }
+
+    setupLibraryFiltering() {
+        const searchInput = document.getElementById('visualizerSearch');
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.filterVisualizers(e.target.value, this.currentCategory);
+            });
+        }
+
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Update active state
+                categoryBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                this.currentCategory = btn.dataset.category;
+                this.filterVisualizers(searchInput?.value || '', this.currentCategory);
+            });
+        });
+    }
+
+    getCurrentCategory() {
+        const activeBtn = document.querySelector('.category-btn.active');
+        return activeBtn ? activeBtn.getAttribute('data-category') : 'all';
+    }
+
+    filterVisualizers(searchTerm, category) {
+        const visualizerItems = document.querySelectorAll('.visualizer-item');
+        let visibleCount = 0;
+
+        visualizerItems.forEach(item => {
+            const type = item.dataset.type;
+            const name = item.querySelector('.visualizer-name')?.textContent.toLowerCase() || '';
+            const description = item.querySelector('.visualizer-desc')?.textContent.toLowerCase() || '';
+            const itemCategory = item.dataset.category;
+
+            const matchesSearch = !searchTerm || 
+                name.includes(searchTerm.toLowerCase()) || 
+                description.includes(searchTerm.toLowerCase()) ||
+                type.includes(searchTerm.toLowerCase());
+
+            const matchesCategory = category === 'all' || itemCategory === category;
+
+            if (matchesSearch && matchesCategory) {
+                item.style.display = 'flex';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Show/hide no results message
+        this.toggleNoResultsMessage(visibleCount === 0);
+    }
+
+    toggleNoResultsMessage(show) {
+        let noResultsEl = document.querySelector('.no-results');
+        
+        if (show && !noResultsEl) {
+            noResultsEl = document.createElement('div');
+            noResultsEl.className = 'no-results';
+            noResultsEl.innerHTML = `
+                <i class="fas fa-search"></i>
+                <p>No visualizers found</p>
+                <span class="suggestion">Try adjusting your search or category filter</span>
+            `;
+            document.querySelector('.visualizer-grid').appendChild(noResultsEl);
+        } else if (!show && noResultsEl) {
+            noResultsEl.remove();
+        }
+    }
+
+    addVisualizerFromLibrary(type) {
+        if (window.app && window.app.canvas) {
+            // Add visualizer at center of viewport
+            const canvasRect = window.app.canvas.canvas.getBoundingClientRect();
+            const x = canvasRect.width / 2;
+            const y = canvasRect.height / 2;
+            window.app.canvas.addVisualizer(type, x, y);
+        }
+    }
+
+    bindPropertyEvents(visualizer) {
         const inputs = document.querySelectorAll('#propertiesContent .property-input');
 
         inputs.forEach(input => {
@@ -753,6 +954,9 @@ class UIManager {
     init() {
         console.log('UI Manager initialized');
         // Additional initialization can be added here
+        
+        this.populateVisualizerLibrary();
+        this.bindKeyboardShortcuts();
     }
 }
 

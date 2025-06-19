@@ -28,6 +28,11 @@ class CanvasManager {
             height: 720,
             visible: false
         };
+
+        // Snap settings
+        this.snapDistance = 20; // Distance in pixels to trigger snap
+        this.showSnapGuides = true; // Show visual guides when snapping
+
         this.isDraggingVideoArea = false;
         this.isResizingVideoArea = false;
         this.videoAreaHandle = null;
@@ -210,9 +215,22 @@ class CanvasManager {
             // Resize video area
             this.handleVideoAreaResize(mousePos);
         } else if (this.isDragging && this.selectedVisualizer) {
-            // Move visualizer
-            this.selectedVisualizer.x = mousePos.x - this.dragOffset.x;
-            this.selectedVisualizer.y = mousePos.y - this.dragOffset.y;
+            // Move visualizer with snapping
+            let newX = mousePos.x - this.dragOffset.x;
+            let newY = mousePos.y - this.dragOffset.y;
+
+            // Apply snap-to-center logic
+            const snapResult = this.getSnapPosition(newX, newY);
+            if (snapResult.snapped) {
+                newX = snapResult.x;
+                newY = snapResult.y;
+                this.isSnapping = true;
+            } else {
+                this.isSnapping = false;
+            }
+
+            this.selectedVisualizer.x = newX;
+            this.selectedVisualizer.y = newY;
             this.updatePropertiesPanel();
         } else if (this.isResizing && this.selectedVisualizer) {
             // Resize visualizer
@@ -234,7 +252,9 @@ class CanvasManager {
         if (isOverCanvas) {
             this.updateCursor(mousePos);
         }
-    } handleMouseUp(e) {
+    }
+
+    handleMouseUp(e) {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
@@ -243,6 +263,7 @@ class CanvasManager {
         this.isResizingVideoArea = false;
         this.resizeHandle = null;
         this.videoAreaHandle = null;
+        this.isSnapping = false; // Reset snapping state
         this.canvas.style.cursor = 'default';
     }
 
@@ -343,6 +364,47 @@ class CanvasManager {
     handleTouchEnd(e) {
         e.preventDefault();
         this.handleMouseUp({});
+    }
+
+    getSnapPosition(x, y) {
+        const visualizer = this.selectedVisualizer;
+        if (!visualizer) return { snapped: false, x, y };
+
+        // Get viewport center (accounting for current zoom and pan)
+        const viewportCenterX = this.canvas.width / 2;
+        const viewportCenterY = this.canvas.height / 2;
+
+        // Get visualizer center when positioned at x, y
+        const visualizerCenterX = x + visualizer.width / 2;
+        const visualizerCenterY = y + visualizer.height / 2;
+
+        // Calculate distance from visualizer center to viewport center
+        const distanceX = Math.abs(visualizerCenterX - viewportCenterX);
+        const distanceY = Math.abs(visualizerCenterY - viewportCenterY);
+
+        let snappedX = x;
+        let snappedY = y;
+        let snapped = false;
+
+        // Snap to center horizontally
+        if (distanceX <= this.snapDistance) {
+            snappedX = viewportCenterX - visualizer.width / 2;
+            snapped = true;
+        }
+
+        // Snap to center vertically
+        if (distanceY <= this.snapDistance) {
+            snappedY = viewportCenterY - visualizer.height / 2;
+            snapped = true;
+        }
+
+        return {
+            snapped,
+            x: snappedX,
+            y: snappedY,
+            snappedX: distanceX <= this.snapDistance,
+            snappedY: distanceY <= this.snapDistance
+        };
     }
 
     bindPropertyEvents(visualizer) {
@@ -1055,8 +1117,8 @@ class CanvasManager {
         // Update the input fields
         document.getElementById('videoAreaWidth').value = newWidth;
         document.getElementById('videoAreaHeight').value = newHeight;
-    } 
-    
+    }
+
     updateCursor(mousePos) {
         // Check video area interactions first - only when visible
         if (this.videoArea.visible) {
@@ -1390,6 +1452,11 @@ class CanvasManager {
         // Always render video area FIRST (behind visualizers) - whether visible or not
         this.renderVideoArea();
 
+        // Render snap guides if snapping
+        if (this.isSnapping && this.showSnapGuides) {
+            this.renderSnapGuides();
+        }
+
         // Render visualizers
         this.visualizers.forEach(visualizer => {
             if (visualizer.visible) {
@@ -1408,6 +1475,71 @@ class CanvasManager {
         }
 
         this.ctx.restore();
+    }
+
+    renderSnapGuides() {
+        if (!this.selectedVisualizer) return;
+
+        const visualizer = this.selectedVisualizer;
+        const viewportCenterX = this.canvas.width / 2;
+        const viewportCenterY = this.canvas.height / 2;
+
+        // Get current snap state
+        const snapResult = this.getSnapPosition(visualizer.x, visualizer.y);
+
+        this.ctx.strokeStyle = '#00d4ff';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.globalAlpha = 0.8;
+
+        // Vertical center line (when snapping horizontally)
+        if (snapResult.snappedX) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(viewportCenterX, 0);
+            this.ctx.lineTo(viewportCenterX, this.canvas.height);
+            this.ctx.stroke();
+
+            // Center indicator
+            this.ctx.fillStyle = '#00d4ff';
+            this.ctx.globalAlpha = 1;
+            this.ctx.beginPath();
+            this.ctx.arc(viewportCenterX, viewportCenterY, 4, 0, 2 * Math.PI);
+            this.ctx.fill();
+
+            // Add text label
+            this.ctx.fillStyle = '#00d4ff';
+            this.ctx.font = '12px Inter, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('CENTER', viewportCenterX, viewportCenterY - 15);
+        }
+
+        // Horizontal center line (when snapping vertically)
+        if (snapResult.snappedY) {
+            this.ctx.globalAlpha = 0.8;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, viewportCenterY);
+            this.ctx.lineTo(this.canvas.width, viewportCenterY);
+            this.ctx.stroke();
+
+            // Center indicator (if not already drawn)
+            if (!snapResult.snappedX) {
+                this.ctx.fillStyle = '#00d4ff';
+                this.ctx.globalAlpha = 1;
+                this.ctx.beginPath();
+                this.ctx.arc(viewportCenterX, viewportCenterY, 4, 0, 2 * Math.PI);
+                this.ctx.fill();
+
+                // Add text label
+                this.ctx.fillStyle = '#00d4ff';
+                this.ctx.font = '12px Inter, sans-serif';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('CENTER', viewportCenterX, viewportCenterY - 15);
+            }
+        }
+
+        this.ctx.setLineDash([]);
+        this.ctx.globalAlpha = 1;
+        this.ctx.textAlign = 'left'; // Reset text alignment
     }
 
     renderLockIndicator(visualizer) {
