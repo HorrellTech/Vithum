@@ -12,7 +12,7 @@ class BaseVisualizer {
         this.scaleY = 1;
         this.selected = false;
         this.visible = true;
-        this.selectable = true; // Add this property
+        this.selectable = true;
         this.opacity = 1;
 
         // Common properties
@@ -22,6 +22,10 @@ class BaseVisualizer {
         this.smoothing = 0.8;
         this.sensitivity = 1;
         this.reactToAudio = true;
+
+        // Frequency range properties
+        this.minFrequency = 0;     // 0-100% of frequency spectrum
+        this.maxFrequency = 100;   // 0-100% of frequency spectrum
 
         // Animation properties
         this.animationSpeed = 1;
@@ -110,7 +114,9 @@ class BaseVisualizer {
             audio: {
                 reactToAudio: this.reactToAudio,
                 sensitivity: this.sensitivity,
-                smoothing: this.smoothing
+                smoothing: this.smoothing,
+                minFrequency: this.minFrequency,
+                maxFrequency: this.maxFrequency
             },
             animation: {
                 animationSpeed: this.animationSpeed,
@@ -131,10 +137,30 @@ class BaseVisualizer {
         } else if (category === 'appearance') {
             this[property] = value;
         } else if (category === 'audio') {
-            this[property] = property === 'reactToAudio' ? value : parseFloat(value);
+            if (property === 'reactToAudio') {
+                this[property] = value;
+            } else if (property === 'minFrequency') {
+                this.minFrequency = Math.max(0, Math.min(parseFloat(value), this.maxFrequency));
+            } else if (property === 'maxFrequency') {
+                this.maxFrequency = Math.max(this.minFrequency, Math.min(parseFloat(value), 100));
+            } else {
+                this[property] = parseFloat(value);
+            }
         } else if (category === 'animation') {
             this[property] = parseFloat(value);
         }
+    }
+
+    getFilteredFrequencyData() {
+        if (!this.frequencyData || !this.reactToAudio) {
+            return this.frequencyData;
+        }
+
+        const totalLength = this.frequencyData.length;
+        const startIndex = Math.floor((this.minFrequency / 100) * totalLength);
+        const endIndex = Math.ceil((this.maxFrequency / 100) * totalLength);
+        
+        return this.frequencyData.slice(startIndex, endIndex);
     }
 
     // Save state
@@ -154,10 +180,12 @@ class BaseVisualizer {
             strokeWidth: this.strokeWidth,
             opacity: this.opacity,
             visible: this.visible,
-            selectable: this.selectable, // Add this line
+            selectable: this.selectable,
             reactToAudio: this.reactToAudio,
             sensitivity: this.sensitivity,
             smoothing: this.smoothing,
+            minFrequency: this.minFrequency,
+            maxFrequency: this.maxFrequency,
             animationSpeed: this.animationSpeed,
             pulseStrength: this.pulseStrength,
             rotateSpeed: this.rotateSpeed
@@ -267,9 +295,12 @@ class FrequencyVisualizer extends BaseVisualizer {
             ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
 
-        if (this.frequencyData && this.frequencyData.length > 0) {
+        // Use filtered frequency data
+        const filteredFrequencyData = this.getFilteredFrequencyData();
+        
+        if (filteredFrequencyData && filteredFrequencyData.length > 0) {
             const barWidth = (bounds.width - (this.barCount - 1) * this.barSpacing) / this.barCount;
-            const dataPoints = Math.min(this.barCount, this.frequencyData.length);
+            const dataPoints = Math.min(this.barCount, filteredFrequencyData.length);
 
             // Initialize peaks array if needed
             if (this.peaks.length !== dataPoints) {
@@ -278,12 +309,12 @@ class FrequencyVisualizer extends BaseVisualizer {
 
             for (let i = 0; i < dataPoints; i++) {
                 let dataIndex = this.logarithmic ?
-                    Math.floor(Math.pow(i / dataPoints, 2) * this.frequencyData.length) :
-                    Math.floor(i * this.frequencyData.length / dataPoints);
+                    Math.floor(Math.pow(i / dataPoints, 2) * filteredFrequencyData.length) :
+                    Math.floor(i * filteredFrequencyData.length / dataPoints);
 
-                dataIndex = Math.min(dataIndex, this.frequencyData.length - 1);
+                dataIndex = Math.min(dataIndex, filteredFrequencyData.length - 1);
 
-                let barHeight = (this.frequencyData[dataIndex] / 255) * bounds.height * this.sensitivity;
+                let barHeight = (filteredFrequencyData[dataIndex] / 255) * bounds.height * this.sensitivity;
                 barHeight = Math.max(1, barHeight);
 
                 // Update peaks
@@ -293,6 +324,7 @@ class FrequencyVisualizer extends BaseVisualizer {
 
                 const x = bounds.x + i * (barWidth + this.barSpacing);
                 const y = bounds.y + bounds.height - barHeight;
+                
                 // Draw bar
                 ctx.fillStyle = this.color;
                 ctx.fillRect(x, y, barWidth, barHeight);
@@ -769,6 +801,20 @@ class PlasmaVisualizer extends BaseVisualizer {
         this.frequency1 = 0.02;
         this.frequency2 = 0.03;
         this.gridSize = 8;
+        
+        // Cache for performance
+        this.tempCanvas = null;
+        this.tempCtx = null;
+        this.lastWidth = 0;
+        this.lastHeight = 0;
+        this.imageData = null;
+        this.data = null;
+        
+        // Performance optimizations
+        this.maxDimension = 400; // Limit canvas size for performance
+        this.skipFrames = 0; // Skip frames when resizing
+        this.targetFrameRate = 30; // Target 30fps for plasma
+        this.lastRenderTime = 0;
     }
 
     hexToRgb(hex) {
@@ -777,11 +823,51 @@ class PlasmaVisualizer extends BaseVisualizer {
             r: parseInt(result[1], 16),
             g: parseInt(result[2], 16),
             b: parseInt(result[3], 16)
-        } : { r: 0, g: 212, b: 255 }; // Default to cyan if parsing fails
+        } : { r: 0, g: 212, b: 255 };
+    }
+
+    createTempCanvas(width, height) {
+        // Limit the actual rendering size for performance
+        const scale = Math.min(1, this.maxDimension / Math.max(width, height));
+        const renderWidth = Math.floor(width * scale);
+        const renderHeight = Math.floor(height * scale);
+        
+        if (!this.tempCanvas || 
+            this.lastWidth !== renderWidth || 
+            this.lastHeight !== renderHeight) {
+            
+            this.tempCanvas = document.createElement('canvas');
+            this.tempCanvas.width = renderWidth;
+            this.tempCanvas.height = renderHeight;
+            this.tempCtx = this.tempCanvas.getContext('2d');
+            this.imageData = this.tempCtx.createImageData(renderWidth, renderHeight);
+            this.data = this.imageData.data;
+            this.lastWidth = renderWidth;
+            this.lastHeight = renderHeight;
+        }
+        
+        return { renderWidth, renderHeight, scale: 1/scale };
     }
 
     render(ctx) {
         if (!this.visible) return;
+
+        // Frame rate limiting for performance
+        const now = performance.now();
+        const frameInterval = 1000 / this.targetFrameRate;
+        
+        if (this.skipFrames > 0) {
+            this.skipFrames--;
+            this.renderCachedFrame(ctx);
+            return;
+        }
+        
+        if (now - this.lastRenderTime < frameInterval) {
+            this.renderCachedFrame(ctx);
+            return;
+        }
+        
+        this.lastRenderTime = now;
 
         ctx.save();
 
@@ -795,21 +881,32 @@ class PlasmaVisualizer extends BaseVisualizer {
 
         let audioInfluence = 1;
         if (this.frequencyData && this.reactToAudio) {
-            audioInfluence = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity;
+            const filteredData = this.getFilteredFrequencyData();
+            audioInfluence = 1 + Utils.average(filteredData) / 255 * this.sensitivity;
         }
 
-        // Create off-screen canvas for the plasma effect
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.width;
-        tempCanvas.height = this.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        const imageData = tempCtx.createImageData(this.width, this.height);
-        const data = imageData.data;
+        // Create optimized canvas
+        const { renderWidth, renderHeight, scale } = this.createTempCanvas(this.width, this.height);
+        
+        // Use larger grid size for better performance
+        const adaptiveGridSize = Math.max(this.gridSize, Math.floor(Math.max(renderWidth, renderHeight) / 50));
 
-        for (let x = 0; x < this.width; x += this.gridSize) {
-            for (let y = 0; y < this.height; y += this.gridSize) {
-                const normalizedX = (x - this.width/2) / this.width;
-                const normalizedY = (y - this.height/2) / this.height;
+        // Convert color to RGB once
+        const color = this.hexToRgb(this.color);
+
+        // Process in chunks to prevent blocking
+        this.processPlasmaChunk(renderWidth, renderHeight, adaptiveGridSize, color, audioInfluence, 0);
+
+        ctx.restore();
+    }
+
+    processPlasmaChunk(renderWidth, renderHeight, gridSize, color, audioInfluence, startY) {
+        const chunkHeight = Math.min(gridSize * 4, renderHeight - startY); // Process in small chunks
+        
+        for (let x = 0; x < renderWidth; x += gridSize) {
+            for (let y = startY; y < startY + chunkHeight && y < renderHeight; y += gridSize) {
+                const normalizedX = (x - renderWidth/2) / renderWidth;
+                const normalizedY = (y - renderHeight/2) / renderHeight;
                 
                 const plasma = Math.sin(normalizedX * 10 + this.timeOffset * this.frequency1) +
                               Math.sin(normalizedY * 10 + this.timeOffset * this.frequency2) +
@@ -817,32 +914,71 @@ class PlasmaVisualizer extends BaseVisualizer {
                 
                 const intensity = ((plasma + 3) / 6) * 255 * audioInfluence;
                 
-                // Convert color to RGB
-                const color = this.hexToRgb(this.color);
                 const r = Math.floor(color.r * intensity / 255);
                 const g = Math.floor(color.g * intensity / 255);
                 const b = Math.floor(color.b * intensity / 255);
                 
-                // Fill grid area
-                for (let dx = 0; dx < this.gridSize && x + dx < this.width; dx++) {
-                    for (let dy = 0; dy < this.gridSize && y + dy < this.height; dy++) {
-                        const index = ((y + dy) * this.width + (x + dx)) * 4;
-                        data[index] = r;
-                        data[index + 1] = g;
-                        data[index + 2] = b;
-                        data[index + 3] = 255;
-                    }
-                }
+                // Fill grid area efficiently
+                this.fillGridArea(x, y, gridSize, renderWidth, renderHeight, r, g, b);
             }
         }
 
-        // Put the image data on the temporary canvas
-        tempCtx.putImageData(imageData, 0, 0);
-        
-        // Draw the temporary canvas to the main canvas with proper positioning
-        ctx.drawImage(tempCanvas, -this.width/2, -this.height/2);
+        // If there's more to process, continue in next frame
+        if (startY + chunkHeight < renderHeight) {
+            requestAnimationFrame(() => {
+                this.processPlasmaChunk(renderWidth, renderHeight, gridSize, color, audioInfluence, startY + chunkHeight);
+            });
+        } else {
+            // Finished processing, update the canvas
+            this.tempCtx.putImageData(this.imageData, 0, 0);
+        }
+    }
 
+    fillGridArea(x, y, gridSize, renderWidth, renderHeight, r, g, b) {
+        for (let dx = 0; dx < gridSize && x + dx < renderWidth; dx++) {
+            for (let dy = 0; dy < gridSize && y + dy < renderHeight; dy++) {
+                const index = ((y + dy) * renderWidth + (x + dx)) * 4;
+                this.data[index] = r;
+                this.data[index + 1] = g;
+                this.data[index + 2] = b;
+                this.data[index + 3] = 255;
+            }
+        }
+    }
+
+    renderCachedFrame(ctx) {
+        if (!this.tempCanvas) return;
+
+        ctx.save();
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        // Use image smoothing for upscaling
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        ctx.drawImage(this.tempCanvas, -this.width/2, -this.height/2, this.width, this.height);
         ctx.restore();
+    }
+
+    // Override resize to trigger cache invalidation and frame skipping
+    resize(width, height) {
+        super.resize(width, height);
+        // Skip several frames during resize to maintain performance
+        this.skipFrames = 5;
+        // Clear cache to force recreation
+        this.tempCanvas = null;
+    }
+
+    // Clean up resources
+    destroy() {
+        this.tempCanvas = null;
+        this.tempCtx = null;
+        this.imageData = null;
+        this.data = null;
     }
 }
 
@@ -938,6 +1074,56 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
         this.rotationSpeed = 1;
         this.currentRotation = 0;
         this.mirrorAlternate = true;
+        
+        // Enhanced properties
+        this.patternLayers = 3;
+        this.colorCycleSpeed = 2;
+        this.pulseIntensity = 1;
+        this.complexPattern = true;
+        this.trailEffect = true;
+        this.geometricComplexity = 'medium'; // low, medium, high
+        
+        // Animation states
+        this.colorOffset = 0;
+        this.pulsePhase = 0;
+        this.layerRotations = [];
+        this.patternHistory = [];
+        
+        // Initialize layer rotations
+        for (let i = 0; i < this.patternLayers; i++) {
+            this.layerRotations.push(Math.random() * 360);
+        }
+        
+        // Audio-reactive properties
+        this.bassResponse = 0;
+        this.midResponse = 0;
+        this.trebleResponse = 0;
+        this.smoothedBass = 0;
+        this.smoothedMid = 0;
+        this.smoothedTreble = 0;
+    }
+
+    updateAudioData(audioData, frequencyData) {
+        super.updateAudioData(audioData, frequencyData);
+        
+        if (this.frequencyData && this.reactToAudio) {
+            const filteredData = this.getFilteredFrequencyData();
+            const third = Math.floor(filteredData.length / 3);
+            
+            // Split frequency data into bass, mid, treble
+            const bassData = filteredData.slice(0, third);
+            const midData = filteredData.slice(third, third * 2);
+            const trebleData = filteredData.slice(third * 2);
+            
+            this.bassResponse = Utils.average(bassData) / 255;
+            this.midResponse = Utils.average(midData) / 255;
+            this.trebleResponse = Utils.average(trebleData) / 255;
+            
+            // Smooth the responses for less jittery animation
+            this.smoothedBass = this.smoothedBass * 0.8 + this.bassResponse * 0.2;
+            this.smoothedMid = this.smoothedMid * 0.8 + this.midResponse * 0.2;
+            this.smoothedTreble = this.smoothedTreble * 0.8 + this.trebleResponse * 0.2;
+        }
     }
 
     render(ctx) {
@@ -951,11 +1137,30 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
         ctx.scale(this.scaleX, this.scaleY);
         ctx.globalAlpha = this.opacity;
 
+        // Update animation states
         this.currentRotation += this.rotationSpeed * this.animationSpeed;
+        this.colorOffset += this.colorCycleSpeed * this.animationSpeed;
+        this.pulsePhase += this.animationSpeed * 0.1;
 
         const maxRadius = Math.min(this.width, this.height) / 2;
         const segmentAngle = (2 * Math.PI) / this.segments;
 
+        // Update layer rotations with different speeds
+        for (let i = 0; i < this.layerRotations.length; i++) {
+            const speed = (i + 1) * 0.5 * this.animationSpeed;
+            this.layerRotations[i] += speed * (1 + this.smoothedMid * 2);
+        }
+
+        // Create gradient background if trail effect is enabled
+        if (this.trailEffect) {
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, maxRadius);
+            gradient.addColorStop(0, 'rgba(0,0,0,0.1)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.3)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(-maxRadius, -maxRadius, maxRadius * 2, maxRadius * 2);
+        }
+
+        // Render each kaleidoscope segment
         for (let segment = 0; segment < this.segments; segment++) {
             ctx.save();
             ctx.rotate(segment * segmentAngle);
@@ -972,60 +1177,320 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
             ctx.closePath();
             ctx.clip();
 
-            // Draw pattern
-            this.drawPattern(ctx, maxRadius);
+            // Draw multiple pattern layers
+            this.drawEnhancedPattern(ctx, maxRadius, segment);
             
             ctx.restore();
         }
 
+        // Store pattern history for trail effect
+        if (this.trailEffect && this.patternHistory.length > 5) {
+            this.patternHistory.shift();
+        }
+        
         ctx.restore();
     }
 
-    drawPattern(ctx, maxRadius) {
-        ctx.save();
-        ctx.rotate(Utils.toRadians(this.currentRotation));
+    drawEnhancedPattern(ctx, maxRadius, segment) {
+        // Audio-reactive scaling and coloring
+        const audioScale = 1 + this.smoothedBass * this.sensitivity * 0.8;
+        const audioHue = (this.smoothedTreble * 360 + this.colorOffset) % 360;
+        const pulseFactor = 1 + Math.sin(this.pulsePhase) * this.pulseIntensity * this.smoothedMid * 0.3;
 
-        let audioScale = 1;
-        let audioHue = 0;
-        if (this.frequencyData && this.reactToAudio) {
-            audioScale = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity * 0.5;
-            audioHue = (Utils.average(this.frequencyData) / 255) * 360;
+        // Draw multiple layers with different properties
+        for (let layer = 0; layer < this.patternLayers; layer++) {
+            ctx.save();
+            
+            const layerRotation = this.currentRotation + this.layerRotations[layer];
+            ctx.rotate(Utils.toRadians(layerRotation));
+            
+            const layerAlpha = 0.8 - (layer * 0.2);
+            const layerScale = 1 - (layer * 0.1);
+            const layerHueShift = layer * 60;
+            
+            ctx.globalAlpha = layerAlpha * this.opacity;
+            
+            this.drawPatternLayer(ctx, maxRadius, layer, audioScale, audioHue, pulseFactor, layerScale, layerHueShift);
+            
+            ctx.restore();
         }
+    }
 
-        ctx.lineWidth = 2;
+    drawPatternLayer(ctx, maxRadius, layer, audioScale, audioHue, pulseFactor, layerScale, layerHueShift) {
+        const patternSteps = this.getPatternSteps();
+        const angleStep = this.getAngleStep();
+        
+        for (let r = this.patternSize * (layer + 1); r < maxRadius * layerScale; r += this.patternSize * 2) {
+            const radiusScale = audioScale * pulseFactor * layerScale;
+            const actualRadius = r * radiusScale;
+            
+            if (actualRadius > maxRadius) break;
+            
+            for (let angle = 0; angle < 180; angle += angleStep) {
+                const x = Math.cos(Utils.toRadians(angle)) * actualRadius;
+                const y = Math.sin(Utils.toRadians(angle)) * actualRadius;
 
-        for (let r = this.patternSize; r < maxRadius; r += this.patternSize * 1.5) {
-            for (let angle = 0; angle < 180; angle += 30) { // Only half circle for mirroring
-                const x = Math.cos(Utils.toRadians(angle)) * r * audioScale;
-                const y = Math.sin(Utils.toRadians(angle)) * r * audioScale;
-
-                // Color cycling with audio
-                const hue = (angle + this.currentRotation + audioHue) % 360;
-                const color = `hsl(${hue}, 70%, 60%)`;
+                // Dynamic color based on position and audio
+                const positionHue = (audioHue + layerHueShift + angle + (r / maxRadius) * 120) % 360;
+                const saturation = 60 + this.smoothedMid * 40;
+                const lightness = 50 + this.smoothedTreble * 30;
+                const color = `hsl(${positionHue}, ${saturation}%, ${lightness}%)`;
                 
                 ctx.fillStyle = color;
                 ctx.strokeStyle = color;
 
-                if (this.innerPattern === 'circle') {
-                    ctx.beginPath();
-                    ctx.arc(x, y, this.patternSize * 0.4 * audioScale, 0, 2 * Math.PI);
-                    ctx.fill();
-                } else if (this.innerPattern === 'square') {
-                    const size = this.patternSize * 0.8 * audioScale;
-                    ctx.fillRect(x - size/2, y - size/2, size, size);
-                } else if (this.innerPattern === 'triangle') {
-                    const size = this.patternSize * 0.6 * audioScale;
-                    ctx.beginPath();
-                    ctx.moveTo(x, y - size);
-                    ctx.lineTo(x - size, y + size/2);
-                    ctx.lineTo(x + size, y + size/2);
-                    ctx.closePath();
-                    ctx.fill();
-                }
+                // Dynamic pattern size based on audio and position
+                const sizeMultiplier = (0.5 + this.smoothedBass * 0.8) * pulseFactor * (1 + Math.sin(angle * 0.1) * 0.2);
+                
+                this.drawComplexPattern(ctx, x, y, sizeMultiplier, angle, r, layer);
             }
         }
+    }
 
+    drawComplexPattern(ctx, x, y, sizeMultiplier, angle, radius, layer) {
+        const size = this.patternSize * sizeMultiplier;
+        
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Utils.toRadians(angle + this.currentRotation * 0.5));
+        
+        switch (this.innerPattern) {
+            case 'circle':
+                this.drawEnhancedCircle(ctx, size, layer);
+                break;
+            case 'square':
+                this.drawEnhancedSquare(ctx, size, layer);
+                break;
+            case 'triangle':
+                this.drawEnhancedTriangle(ctx, size, layer);
+                break;
+            case 'star':
+                this.drawStar(ctx, size, layer);
+                break;
+            case 'hexagon':
+                this.drawHexagon(ctx, size, layer);
+                break;
+            case 'flower':
+                this.drawFlower(ctx, size, layer);
+                break;
+            case 'mandala':
+                this.drawMandala(ctx, size, layer);
+                break;
+        }
+        
         ctx.restore();
+    }
+
+    drawEnhancedCircle(ctx, size, layer) {
+        // Outer glow
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+        gradient.addColorStop(0, ctx.fillStyle);
+        gradient.addColorStop(0.7, ctx.fillStyle + '80');
+        gradient.addColorStop(1, ctx.fillStyle + '00');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, size, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Inner circle
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.6, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    drawEnhancedSquare(ctx, size, layer) {
+        // Rotated squares for complexity
+        for (let i = 0; i < 3; i++) {
+            ctx.save();
+            ctx.rotate(Utils.toRadians(i * 15 + this.currentRotation));
+            const s = size * (1 - i * 0.2);
+            ctx.fillRect(-s/2, -s/2, s, s);
+            ctx.restore();
+        }
+    }
+
+    drawEnhancedTriangle(ctx, size, layer) {
+        // Multiple triangles
+        for (let i = 0; i < 2; i++) {
+            ctx.save();
+            ctx.rotate(Utils.toRadians(i * 60));
+            ctx.beginPath();
+            const s = size * (1 - i * 0.3);
+            ctx.moveTo(0, -s);
+            ctx.lineTo(-s * 0.866, s * 0.5);
+            ctx.lineTo(s * 0.866, s * 0.5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    drawStar(ctx, size, layer) {
+        const points = 5 + layer;
+        const outerRadius = size;
+        const innerRadius = size * 0.4;
+        
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+            const angle = (i * Math.PI) / points;
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawHexagon(ctx, size, layer) {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            const x = Math.cos(angle) * size;
+            const y = Math.sin(angle) * size;
+            
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        // Inner hexagon
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            const x = Math.cos(angle) * size * 0.5;
+            const y = Math.sin(angle) * size * 0.5;
+            
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    drawFlower(ctx, size, layer) {
+        const petals = 6;
+        for (let i = 0; i < petals; i++) {
+            ctx.save();
+            ctx.rotate((i * 2 * Math.PI) / petals);
+            
+            ctx.beginPath();
+            ctx.ellipse(0, size * 0.3, size * 0.3, size * 0.6, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        // Center
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.2, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    drawMandala(ctx, size, layer) {
+        const rings = 3;
+        const elements = 8;
+        
+        for (let ring = 0; ring < rings; ring++) {
+            const ringRadius = size * (0.3 + ring * 0.3);
+            
+            for (let i = 0; i < elements; i++) {
+                const angle = (i * 2 * Math.PI) / elements + ring * 0.2;
+                const x = Math.cos(angle) * ringRadius;
+                const y = Math.sin(angle) * ringRadius;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size * 0.1, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+    }
+
+    getPatternSteps() {
+        switch (this.geometricComplexity) {
+            case 'low': return 1;
+            case 'medium': return 2;
+            case 'high': return 3;
+            default: return 2;
+        }
+    }
+
+    getAngleStep() {
+        switch (this.geometricComplexity) {
+            case 'low': return 45;
+            case 'medium': return 30;
+            case 'high': return 20;
+            default: return 30;
+        }
+    }
+
+    // Override getProperties to include new properties
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            kaleidoscope: {
+                segments: this.segments,
+                innerPattern: this.innerPattern,
+                patternSize: this.patternSize,
+                rotationSpeed: this.rotationSpeed,
+                mirrorAlternate: this.mirrorAlternate,
+                patternLayers: this.patternLayers,
+                colorCycleSpeed: this.colorCycleSpeed,
+                pulseIntensity: this.pulseIntensity,
+                complexPattern: this.complexPattern,
+                trailEffect: this.trailEffect,
+                geometricComplexity: this.geometricComplexity
+            }
+        };
+    }
+
+    // Override updateProperty to handle new properties
+    updateProperty(category, property, value) {
+        if (category === 'kaleidoscope') {
+            if (property === 'segments') {
+                this.segments = Math.max(3, Math.min(20, parseInt(value)));
+            } else if (property === 'patternLayers') {
+                this.patternLayers = Math.max(1, Math.min(5, parseInt(value)));
+                // Reinitialize layer rotations
+                this.layerRotations = [];
+                for (let i = 0; i < this.patternLayers; i++) {
+                    this.layerRotations.push(Math.random() * 360);
+                }
+            } else if (property === 'innerPattern' || property === 'geometricComplexity') {
+                this[property] = value;
+            } else if (property === 'mirrorAlternate' || property === 'complexPattern' || property === 'trailEffect') {
+                this[property] = value;
+            } else {
+                this[property] = parseFloat(value);
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    // Override serialize to include new properties
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            segments: this.segments,
+            innerPattern: this.innerPattern,
+            patternSize: this.patternSize,
+            rotationSpeed: this.rotationSpeed,
+            mirrorAlternate: this.mirrorAlternate,
+            patternLayers: this.patternLayers,
+            colorCycleSpeed: this.colorCycleSpeed,
+            pulseIntensity: this.pulseIntensity,
+            complexPattern: this.complexPattern,
+            trailEffect: this.trailEffect,
+            geometricComplexity: this.geometricComplexity
+        };
     }
 }
 

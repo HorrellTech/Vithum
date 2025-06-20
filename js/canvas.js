@@ -331,6 +331,13 @@ class CanvasManager {
                     e.preventDefault();
                     this.toggleVisualizerSelectable(this.selectedVisualizer);
                     break;
+                case 'u':
+                case 'U':
+                    e.preventDefault();
+                    if (!this.selectedVisualizer.selectable) {
+                        this.unlockVisualizer(this.selectedVisualizer);
+                    }
+                    break;
                 case 'Escape':
                     this.selectVisualizer(null);
                     this.resetClickCycle();
@@ -1199,6 +1206,16 @@ class CanvasManager {
                     </button>
                 </div>
             </div>
+            ${!visualizer.selectable ? `
+                <div class="property-item unlock-section">
+                    <div class="unlock-controls">
+                        <button class="btn-small unlock-btn" id="unlockVisualizer">
+                            <i class="fas fa-unlock"></i> Unlock This Visualizer
+                        </button>
+                        <p class="unlock-info">This visualizer is locked. Click unlock to make it selectable again.</p>
+                    </div>
+                </div>
+            ` : ''}
         </div>
         
         <div class="property-group">
@@ -1275,23 +1292,114 @@ class CanvasManager {
             <div class="property-item">
                 <label class="property-label">
                     <input type="checkbox" ${properties.audio.reactToAudio ? 'checked' : ''} 
-                           data-category="audio" data-property="reactToAudio"> 
+                        data-category="audio" data-property="reactToAudio"> 
                     React to Audio
                 </label>
             </div>
             <div class="property-item">
                 <label class="property-label">Sensitivity</label>
                 <input type="range" class="property-input property-range" value="${properties.audio.sensitivity}" 
-                       data-category="audio" data-property="sensitivity" min="0.1" max="5" step="0.1">
+                    data-category="audio" data-property="sensitivity" min="0.1" max="5" step="0.1">
                 <span class="range-value">${properties.audio.sensitivity}</span>
             </div>
             <div class="property-item">
                 <label class="property-label">Smoothing</label>
                 <input type="range" class="property-input property-range" value="${properties.audio.smoothing}" 
-                       data-category="audio" data-property="smoothing" min="0" max="1" step="0.1">
+                    data-category="audio" data-property="smoothing" min="0" max="1" step="0.1">
                 <span class="range-value">${Math.round(properties.audio.smoothing * 100)}%</span>
             </div>
+            <div class="property-item">
+                <label class="property-label">Min Frequency</label>
+                <input type="range" class="property-input property-range" value="${properties.audio.minFrequency}" 
+                    data-category="audio" data-property="minFrequency" min="0" max="100" step="1">
+                <span class="range-value">${properties.audio.minFrequency}%</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Max Frequency</label>
+                <input type="range" class="property-input property-range" value="${properties.audio.maxFrequency}" 
+                    data-category="audio" data-property="maxFrequency" min="0" max="100" step="1">
+                <span class="range-value">${properties.audio.maxFrequency}%</span>
+            </div>
+            <div class="frequency-range-info">
+                <small>Frequency Range: ${properties.audio.minFrequency}% - ${properties.audio.maxFrequency}%</small>
+            </div>
         </div>
+
+        ${visualizer.constructor.name === 'KaleidoscopeVisualizer' ? `
+            <div class="property-group">
+                <h4>Kaleidoscope Settings</h4>
+                <div class="property-item">
+                    <label class="property-label">Segments</label>
+                    <input type="range" class="property-input property-range" value="${properties.kaleidoscope.segments}" 
+                        data-category="kaleidoscope" data-property="segments" min="3" max="20" step="1">
+                    <span class="range-value">${properties.kaleidoscope.segments}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Pattern Type</label>
+                    <select class="property-input" data-category="kaleidoscope" data-property="innerPattern">
+                        <option value="circle" ${properties.kaleidoscope.innerPattern === 'circle' ? 'selected' : ''}>Circle</option>
+                        <option value="square" ${properties.kaleidoscope.innerPattern === 'square' ? 'selected' : ''}>Square</option>
+                        <option value="triangle" ${properties.kaleidoscope.innerPattern === 'triangle' ? 'selected' : ''}>Triangle</option>
+                        <option value="star" ${properties.kaleidoscope.innerPattern === 'star' ? 'selected' : ''}>Star</option>
+                        <option value="hexagon" ${properties.kaleidoscope.innerPattern === 'hexagon' ? 'selected' : ''}>Hexagon</option>
+                        <option value="flower" ${properties.kaleidoscope.innerPattern === 'flower' ? 'selected' : ''}>Flower</option>
+                        <option value="mandala" ${properties.kaleidoscope.innerPattern === 'mandala' ? 'selected' : ''}>Mandala</option>
+                    </select>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Pattern Size</label>
+                    <input type="range" class="property-input property-range" value="${properties.kaleidoscope.patternSize}" 
+                        data-category="kaleidoscope" data-property="patternSize" min="5" max="50" step="1">
+                    <span class="range-value">${properties.kaleidoscope.patternSize}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Pattern Layers</label>
+                    <input type="range" class="property-input property-range" value="${properties.kaleidoscope.patternLayers}" 
+                        data-category="kaleidoscope" data-property="patternLayers" min="1" max="5" step="1">
+                    <span class="range-value">${properties.kaleidoscope.patternLayers}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Rotation Speed</label>
+                    <input type="range" class="property-input property-range" value="${properties.kaleidoscope.rotationSpeed}" 
+                        data-category="kaleidoscope" data-property="rotationSpeed" min="0" max="5" step="0.1">
+                    <span class="range-value">${properties.kaleidoscope.rotationSpeed}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Color Cycle Speed</label>
+                    <input type="range" class="property-input property-range" value="${properties.kaleidoscope.colorCycleSpeed}" 
+                        data-category="kaleidoscope" data-property="colorCycleSpeed" min="0" max="5" step="0.1">
+                    <span class="range-value">${properties.kaleidoscope.colorCycleSpeed}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Pulse Intensity</label>
+                    <input type="range" class="property-input property-range" value="${properties.kaleidoscope.pulseIntensity}" 
+                        data-category="kaleidoscope" data-property="pulseIntensity" min="0" max="3" step="0.1">
+                    <span class="range-value">${properties.kaleidoscope.pulseIntensity}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Complexity</label>
+                    <select class="property-input" data-category="kaleidoscope" data-property="geometricComplexity">
+                        <option value="low" ${properties.kaleidoscope.geometricComplexity === 'low' ? 'selected' : ''}>Low</option>
+                        <option value="medium" ${properties.kaleidoscope.geometricComplexity === 'medium' ? 'selected' : ''}>Medium</option>
+                        <option value="high" ${properties.kaleidoscope.geometricComplexity === 'high' ? 'selected' : ''}>High</option>
+                    </select>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" ${properties.kaleidoscope.mirrorAlternate ? 'checked' : ''} 
+                            data-category="kaleidoscope" data-property="mirrorAlternate"> 
+                        Alternate Mirroring
+                    </label>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" ${properties.kaleidoscope.trailEffect ? 'checked' : ''} 
+                            data-category="kaleidoscope" data-property="trailEffect"> 
+                        Trail Effect
+                    </label>
+                </div>
+            </div>
+            ` : ''}
         
         <div class="property-group">
             <h4>Keyboard Shortcuts</h4>
@@ -1323,6 +1431,7 @@ class CanvasManager {
         const sendToBackBtn = document.getElementById('sendToBack');
         const toggleVisibilityBtn = document.getElementById('toggleVisibility');
         const toggleSelectableBtn = document.getElementById('toggleSelectable');
+        const unlockBtn = document.getElementById('unlockVisualizer');
 
         if (bringToFrontBtn) {
             bringToFrontBtn.addEventListener('click', () => {
@@ -1348,8 +1457,29 @@ class CanvasManager {
             });
         }
 
+        if (unlockBtn) {
+            unlockBtn.addEventListener('click', () => {
+                this.unlockVisualizer(visualizer);
+            });
+        }
+
         // Bind property change events
         this.bindPropertyEvents(visualizer);
+    }
+
+    unlockVisualizer(visualizer) {
+        visualizer.selectable = true;
+        this.updatePropertiesPanel(visualizer);
+
+        // Show notification
+        if (window.app) {
+            window.app.showNotification(
+                'Visualizer Unlocked',
+                `${visualizer.constructor.name} is now selectable`,
+                'success',
+                2000
+            );
+        }
     }
 
     showNoSelection() {

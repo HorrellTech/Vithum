@@ -459,3 +459,46 @@
     font-size: 14px;
     color: rgba(255, 255, 255, 0.5);
 }
+
+.unlock-section {
+    background: rgba(255, 107, 53, 0.1);
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 8px;
+}
+
+.unlock-controls {
+    text-align: center;
+}
+
+.unlock-btn {
+    background: #ff6b35 !important;
+    color: white !important;
+    border: none !important;
+    margin-bottom: 8px;
+}
+
+.unlock-btn:hover {
+    background: #e55a2b !important;
+}
+
+.unlock-info {
+    font-size: 11px;
+    color: #ff6b35;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.frequency-range-info {
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(0, 212, 255, 0.1);
+    border-radius: 4px;
+    text-align: center;
+}
+
+.frequency-range-info small {
+    color: #00d4ff;
+    font-weight: 500;
+}

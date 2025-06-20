@@ -48,51 +48,230 @@ class UIManager {
     }
 
     bindEvents() {
-        // Toolbar buttons
-        document.getElementById('newProject').addEventListener('click', () => this.newProject());
-        document.getElementById('openProject').addEventListener('click', () => this.openProject());
-        document.getElementById('saveProject').addEventListener('click', () => this.saveProject());
-        document.getElementById('exportProject').addEventListener('click', () => this.exportProject());
+        // Get audio element reference - it might not exist yet
+        this.audioElement = document.getElementById('audioElement') || document.querySelector('audio');
+        
+        // Only bind audio events if audio element exists
+        if (this.audioElement) {
+            // Remove existing listeners to prevent duplicates
+            this.audioElement.removeEventListener('loadeddata', this.handleLoadedData);
+            this.audioElement.removeEventListener('play', this.handlePlay);
+            this.audioElement.removeEventListener('pause', this.handlePause);
+            this.audioElement.removeEventListener('ended', this.handleEnded);
+            this.audioElement.removeEventListener('error', this.handleError);
+            
+            // Add fresh listeners
+            this.audioElement.addEventListener('loadeddata', this.handleLoadedData);
+            this.audioElement.addEventListener('play', this.handlePlay);
+            this.audioElement.addEventListener('pause', this.handlePause);
+            this.audioElement.addEventListener('ended', this.handleEnded);
+            this.audioElement.addEventListener('error', this.handleError);
+        }
+        
+        // File input (remove and re-add to prevent duplicates)
+        const audioFileInput = document.getElementById('audioFile');
+        if (audioFileInput) {
+            audioFileInput.removeEventListener('change', this.handleFileChange);
+            audioFileInput.addEventListener('change', this.handleFileChange);
+            
+            // Also handle when the dialog is cancelled (no file selected)
+            audioFileInput.addEventListener('cancel', () => {
+                console.log('Audio file selection cancelled');
+            });
+        }
 
-        // Playback controls
-        document.getElementById('playPause').addEventListener('click', () => {
-            if (window.app && window.app.audio) {
-                window.app.audio.togglePlayPause();
-            }
-        });
+        // Bind toolbar buttons
+        this.bindToolbarButtons();
+    }
 
-        document.getElementById('stop').addEventListener('click', () => {
-            if (window.app && window.app.audio) {
-                window.app.audio.stop();
-            }
-        });
+    bindToolbarButtons() {
+        // Project buttons
+        const newProjectBtn = document.getElementById('newProject');
+        if (newProjectBtn) {
+            newProjectBtn.removeEventListener('click', this.handleNewProject);
+            newProjectBtn.addEventListener('click', this.handleNewProject);
+        }
 
-        document.getElementById('loadAudio').addEventListener('click', () => {
-            document.getElementById('audioFile').click();
-        });
+        const openProjectBtn = document.getElementById('openProject');
+        if (openProjectBtn) {
+            openProjectBtn.removeEventListener('click', this.handleOpenProject);
+            openProjectBtn.addEventListener('click', this.handleOpenProject);
+        }
 
-        // View controls
-        document.getElementById('zoomIn').addEventListener('click', () => {
-            if (window.app && window.app.canvas) {
-                window.app.canvas.zoomIn();
-            }
-        });
+        const saveProjectBtn = document.getElementById('saveProject');
+        if (saveProjectBtn) {
+            saveProjectBtn.removeEventListener('click', this.handleSaveProject);
+            saveProjectBtn.addEventListener('click', this.handleSaveProject);
+        }
 
-        document.getElementById('zoomOut').addEventListener('click', () => {
-            if (window.app && window.app.canvas) {
-                window.app.canvas.zoomOut();
-            }
-        });
+        const exportProjectBtn = document.getElementById('exportProject');
+        if (exportProjectBtn) {
+            exportProjectBtn.removeEventListener('click', this.handleExportProject);
+            exportProjectBtn.addEventListener('click', this.handleExportProject);
+        }
 
-        document.getElementById('resetZoom').addEventListener('click', () => {
-            if (window.app && window.app.canvas) {
-                window.app.canvas.resetZoom();
-            }
-        });
+        // Audio control buttons
+        const playPauseBtn = document.getElementById('playPause');
+        if (playPauseBtn) {
+            playPauseBtn.removeEventListener('click', this.handlePlayPause);
+            playPauseBtn.addEventListener('click', this.handlePlayPause);
+        }
 
-        // Panel resizing
+        const stopBtn = document.getElementById('stop');
+        if (stopBtn) {
+            stopBtn.removeEventListener('click', this.handleStop);
+            stopBtn.addEventListener('click', this.handleStop);
+        }
+
+        const loadAudioBtn = document.getElementById('loadAudio');
+        if (loadAudioBtn) {
+            loadAudioBtn.removeEventListener('click', this.handleLoadAudio);
+            loadAudioBtn.addEventListener('click', this.handleLoadAudio);
+        }
+
+        // View control buttons
+        const zoomInBtn = document.getElementById('zoomIn');
+        if (zoomInBtn) {
+            zoomInBtn.removeEventListener('click', this.handleZoomIn);
+            zoomInBtn.addEventListener('click', this.handleZoomIn);
+        }
+
+        const zoomOutBtn = document.getElementById('zoomOut');
+        if (zoomOutBtn) {
+            zoomOutBtn.removeEventListener('click', this.handleZoomOut);
+            zoomOutBtn.addEventListener('click', this.handleZoomOut);
+        }
+
+        const resetZoomBtn = document.getElementById('resetZoom');
+        if (resetZoomBtn) {
+            resetZoomBtn.removeEventListener('click', this.handleResetZoom);
+            resetZoomBtn.addEventListener('click', this.handleResetZoom);
+        }
+
+        const fullscreenBtn = document.getElementById('fullscreen');
+        if (fullscreenBtn) {
+            fullscreenBtn.removeEventListener('click', this.handleFullscreen);
+            fullscreenBtn.addEventListener('click', this.handleFullscreen);
+        }
+
+        // Panel toggle buttons
+        const toggleLeftPanelBtn = document.getElementById('toggleLeftPanel');
+        if (toggleLeftPanelBtn) {
+            toggleLeftPanelBtn.removeEventListener('click', this.handleToggleLeftPanel);
+            toggleLeftPanelBtn.addEventListener('click', this.handleToggleLeftPanel);
+        }
+
+        const toggleBottomPanelBtn = document.getElementById('toggleBottomPanel');
+        if (toggleBottomPanelBtn) {
+            toggleBottomPanelBtn.removeEventListener('click', this.handleToggleBottomPanel);
+            toggleBottomPanelBtn.addEventListener('click', this.handleToggleBottomPanel);
+        }
+
+        // Also bind resize handles
         this.bindResizeHandles();
     }
+
+    removeExistingListeners() {
+        // Clone and replace nodes to remove all event listeners
+        const buttonsToClean = [
+            'newProject', 'openProject', 'saveProject', 'exportProject',
+            'playPause', 'stop', 'loadAudio',
+            'zoomIn', 'zoomOut', 'resetZoom', 'fullscreen',
+            'toggleLeftPanel', 'toggleBottomPanel'
+        ];
+        
+        buttonsToClean.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                const newElement = element.cloneNode(true);
+                element.parentNode.replaceChild(newElement, element);
+            }
+        });
+    }
+
+    // Create bound handler methods to prevent duplicate listeners
+    handleNewProject = () => this.newProject();
+    handleOpenProject = () => this.openProject();
+    handleSaveProject = () => this.saveProject();
+    handleExportProject = () => this.exportProject();
+
+    handlePlayPause = () => {
+        if (window.app && window.app.audio) {
+            window.app.audio.togglePlayPause();
+        }
+    };
+
+    handleLoadedData = (e) => {
+        console.log('Audio loaded');
+    };
+
+    handlePlay = (e) => {
+        console.log('Audio playing');
+    };
+
+    handlePause = (e) => {
+        console.log('Audio paused');
+    };
+
+    handleEnded = (e) => {
+        console.log('Audio ended');
+    };
+
+    handleError = (e) => {
+        console.error('Audio error:', e);
+    };
+
+    handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file && window.app && window.app.audio) {
+            window.app.audio.loadAudioFile(file);
+        }
+    };
+
+    handleStop = () => {
+        if (window.app && window.app.audio) {
+            window.app.audio.stop();
+        }
+    };
+
+    handleLoadAudio = () => {
+        const audioInput = document.getElementById('audioFile');
+        if (audioInput) {
+            // Reset the input to allow selecting the same file again
+            audioInput.value = '';
+            audioInput.click();
+        }
+    };
+
+    handleZoomIn = () => {
+        if (window.app && window.app.canvas) {
+            window.app.canvas.zoomIn();
+        }
+    };
+
+    handleZoomOut = () => {
+        if (window.app && window.app.canvas) {
+            window.app.canvas.zoomOut();
+        }
+    };
+
+    handleResetZoom = () => {
+        if (window.app && window.app.canvas) {
+            window.app.canvas.resetZoom();
+        }
+    };
+
+    handleFullscreen = () => {
+        this.toggleFullscreen();
+    };
+
+    handleToggleLeftPanel = () => {
+        this.toggleLeftPanel();
+    };
+
+    handleToggleBottomPanel = () => {
+        this.toggleBottomPanel();
+    };
 
     bindResizeHandles() {
         const leftHandle = document.querySelector('.resize-left');
@@ -113,6 +292,18 @@ class UIManager {
                 document.addEventListener('mousemove', this.handleRightResize.bind(this));
                 document.addEventListener('mouseup', this.stopResize.bind(this));
                 e.preventDefault();
+            });
+        }
+    }
+
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log('Error attempting to enable fullscreen:', err);
+            });
+        } else {
+            document.exitFullscreen().catch(err => {
+                console.log('Error attempting to exit fullscreen:', err);
             });
         }
     }
@@ -482,6 +673,41 @@ class UIManager {
         }
     }
 
+    resetAudioState() {
+        // Stop playback
+        this.stop();
+        
+        // Disconnect audio source
+        if (this.audioSource) {
+            try {
+                this.audioSource.disconnect();
+            } catch (error) {
+                console.log('Audio source already disconnected');
+            }
+            this.audioSource = null;
+        }
+        
+        // Clear audio element
+        if (this.audioElement.src) {
+            this.audioElement.pause();
+            this.audioElement.removeAttribute('src');
+            this.audioElement.load();
+        }
+        
+        // Clean up blob URL
+        if (this.currentBlobUrl) {
+            URL.revokeObjectURL(this.currentBlobUrl);
+            this.currentBlobUrl = null;
+        }
+        
+        // Reset state
+        this.isPlaying = false;
+        this.audioFile = null;
+        this.updatePlayButton();
+        
+        console.log('Audio state completely reset');
+    }
+
     addVisualizerFromLibrary(type) {
         if (window.app && window.app.canvas) {
             // Add visualizer at center of viewport
@@ -613,7 +839,9 @@ class UIManager {
     exportProject() {
         // Show export options dialog
         this.showExportDialog();
-    } showExportDialog() {
+    } 
+    
+    showExportDialog() {
         // Get default export dimensions from video area if visible, otherwise canvas
         let defaultWidth = 1920;
         let defaultHeight = 1080;
@@ -770,7 +998,9 @@ class UIManager {
             console.error('Export failed:', error);
             alert('Export failed. Please try again.');
         }
-    } exportImage(canvas, width, height, quality) {
+    } 
+    
+    exportImage(canvas, width, height, quality) {
         // Create a temporary canvas with desired dimensions
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = width;

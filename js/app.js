@@ -11,6 +11,12 @@ class VithumApp {
     }
 
     async init() {
+        // Prevent multiple initializations
+        if (this.initialized) {
+            console.log('App already initialized, skipping...');
+            return;
+        }
+        
         try {
             console.log('Initializing Vithum Audio Visualizer Studio...');
         
@@ -31,32 +37,48 @@ class VithumApp {
                 throw new Error(`Missing required classes: ${missingClasses.join(', ')}`);
             }
             
-            // Initialize core components
-            this.audio = new AudioManager();
-            this.canvas = new CanvasManager();
-            this.ui = new UIManager();
+            // Initialize core components only once
+            if (!this.audio) this.audio = new AudioManager();
+            if (!this.canvas) this.canvas = new CanvasManager();
+            if (!this.ui) this.ui = new UIManager();
             
-            // Make UI available globally for onclick handlers
+            // Make components available globally
             window.ui = this.ui;
+            window.audio = this.audio;
+            window.canvas = this.canvas;
             
             // Initialize UI
-            this.ui = new UIManager();
-            this.ui.populateVisualizerLibrary(); // Ensure this is called
-                    
-            // Start main animation loop
+            this.ui.init();
+            
+            // Set up audio timeline updates
+            this.setupAudioTimelineUpdates();
+            
+            // Check browser support
+            this.checkBrowserSupport();
+            
+            // Start the main animation loop
             this.startAnimationLoop();
             
-            // Setup audio timeline updates
-            this.setupAudioTimelineUpdates();
-
-            console.log('Vithum Studio initialized successfully');
+            // Mark as initialized
+            this.initialized = true;
             
-            // Show welcome message
-            this.showWelcomeMessage();
+            console.log('✓ Vithum initialized successfully');
+            
+            this.showNotification(
+                'Welcome to Vithum',
+                'Audio visualizer studio ready! Drag visualizers onto the canvas to get started.',
+                'success',
+                4000
+            );
             
         } catch (error) {
-            console.error('Failed to initialize Vithum Studio:', error);
-            this.showErrorMessage('Failed to initialize the application. Please refresh and try again.');
+            console.error('Failed to initialize Vithum:', error);
+            this.showNotification(
+                'Initialization Error',
+                'Failed to start the application. Please refresh the page.',
+                'error',
+                8000
+            );
         }
     }
 
