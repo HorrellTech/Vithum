@@ -1707,6 +1707,98 @@ class CanvasManager {
         `;
         }
 
+        // Add MatrixVisualizer properties
+        if (visualizer instanceof MatrixVisualizer) {
+            const matrixProps = properties.matrix;
+            propertiesHTML += `
+                <div class="property-group">
+                    <h4>Matrix Properties</h4>
+                    <div class="property-item">
+                        <label class="property-label">Fall Speed</label>
+                        <input type="range" class="property-input property-range" value="${matrixProps.fallSpeed}" 
+                               data-category="matrix" data-property="fallSpeed" min="0.1" max="5" step="0.1">
+                        <span class="range-value">${matrixProps.fallSpeed.toFixed(1)}</span>
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Font Size</label>
+                        <input type="number" class="property-input" value="${matrixProps.fontSize}" 
+                               data-category="matrix" data-property="fontSize" min="6" max="32">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Rain Density</label>
+                        <input type="range" class="property-input property-range" value="${matrixProps.rainDensity}" 
+                               data-category="matrix" data-property="rainDensity" min="0.1" max="1" step="0.05">
+                        <span class="range-value">${Math.round(matrixProps.rainDensity * 100)}%</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add SunburstVisualizer properties
+        if (visualizer instanceof SunburstVisualizer) {
+            const sunburstProps = properties.sunburst;
+            propertiesHTML += `
+                <div class="property-group">
+                    <h4>Sunburst Properties</h4>
+                    <div class="property-item">
+                        <label class="property-label">Ray Count</label>
+                        <input type="number" class="property-input" value="${sunburstProps.rayCount}" 
+                               data-category="sunburst" data-property="rayCount" min="8" max="256">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Inner Radius</label>
+                        <input type="number" class="property-input" value="${sunburstProps.innerRadius}" 
+                               data-category="sunburst" data-property="innerRadius" min="0" max="100">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Rotation Speed</label>
+                        <input type="range" class="property-input property-range" value="${sunburstProps.rotationSpeed}" 
+                               data-category="sunburst" data-property="rotationSpeed" min="-10" max="10" step="0.1">
+                        <span class="range-value">${sunburstProps.rotationSpeed.toFixed(1)}</span>
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Color Mode</label>
+                        <select class="property-input" data-category="sunburst" data-property="colorMode">
+                            <option value="solid" ${sunburstProps.colorMode === 'solid' ? 'selected' : ''}>Solid</option>
+                            <option value="gradient" ${sunburstProps.colorMode === 'gradient' ? 'selected' : ''}>Gradient</option>
+                            <option value="rainbow" ${sunburstProps.colorMode === 'rainbow' ? 'selected' : ''}>Rainbow</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add Equalizer3DVisualizer properties
+        if (visualizer instanceof Equalizer3DVisualizer) {
+            const eq3dProps = properties.equalizer3d;
+            propertiesHTML += `
+                <div class="property-group">
+                    <h4>3D Equalizer Properties</h4>
+                    <div class="property-item">
+                        <label class="property-label">Bar Count</label>
+                        <input type="number" class="property-input" value="${eq3dProps.barCount}" 
+                               data-category="equalizer3d" data-property="barCount" min="8" max="128">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Bar Spacing</label>
+                        <input type="number" class="property-input" value="${eq3dProps.barSpacing}" 
+                               data-category="equalizer3d" data-property="barSpacing" min="0" max="20">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Perspective</label>
+                        <input type="range" class="property-input property-range" value="${eq3dProps.perspective}" 
+                               data-category="equalizer3d" data-property="perspective" min="0" max="0.95" step="0.01">
+                        <span class="range-value">${eq3dProps.perspective.toFixed(2)}</span>
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">Depth</label>
+                        <input type="number" class="property-input" value="${eq3dProps.depth}" 
+                               data-category="equalizer3d" data-property="depth" min="10" max="200">
+                    </div>
+                </div>
+            `;
+        }
+
         // Add keyboard shortcuts
         propertiesHTML += `
         <div class="property-group">

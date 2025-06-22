@@ -2268,6 +2268,352 @@ class ReactiveImageVisualizer extends BaseVisualizer {
     }
 }
 
+class MatrixVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.fallSpeed = 1;
+        this.fontSize = 16;
+        this.rainDensity = 0.8; // 0 to 1
+        this.characters = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン0123456789';
+        this.trailLength = 18;
+        this.drops = [];
+        this.columns = 0;
+        this.initializeDrops();
+    }
+
+    initializeDrops() {
+        this.columns = Math.floor(this.width / this.fontSize);
+        this.drops = [];
+        for (let i = 0; i < this.columns; i++) {
+            // Each drop is an object: { y, trail, speed }
+            this.drops[i] = {
+                y: Math.random() * this.height,
+                trail: Array.from({ length: this.trailLength }, () => Math.floor(Math.random() * this.characters.length)),
+                speed: this.fallSpeed * (0.8 + Math.random() * 0.4)
+            };
+        }
+    }
+
+    resize(width, height) {
+        super.resize(width, height);
+        this.initializeDrops();
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            matrix: {
+                fallSpeed: this.fallSpeed,
+                fontSize: this.fontSize,
+                rainDensity: this.rainDensity,
+                trailLength: this.trailLength
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'matrix') {
+            if (property === 'trailLength') {
+                this.trailLength = Math.max(5, Math.min(40, parseInt(value)));
+                this.initializeDrops();
+            } else {
+                this[property] = parseFloat(value);
+                if (property === 'fontSize' || property === 'rainDensity' || property === 'fallSpeed') {
+                    this.initializeDrops();
+                }
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+
+        // Fading background for trails
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+
+        ctx.font = `${this.fontSize}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        // Audio influence
+        const audioAverage = this.frequencyData && this.reactToAudio
+            ? Utils.average(this.getFilteredFrequencyData()) / 255
+            : 0.5;
+        const effectiveSpeed = this.fallSpeed * this.animationSpeed * (0.7 + audioAverage * this.sensitivity);
+
+        // Draw each column/drop
+        for (let i = 0; i < this.columns; i++) {
+            const drop = this.drops[i];
+            let y = drop.y - this.height / 2;
+
+            // Draw the trail
+            for (let t = 0; t < this.trailLength; t++) {
+                const charIndex = drop.trail[t];
+                const char = this.characters[charIndex];
+                const trailY = y - t * this.fontSize;
+
+                // Fade out trail: head is brightest, tail is faint
+                let alpha = this.opacity * (1 - t / this.trailLength);
+                if (t === 0) {
+                    ctx.fillStyle = '#fff';
+                    ctx.globalAlpha = Math.min(1, alpha * 1.2);
+                } else {
+                    ctx.fillStyle = this.color;
+                    ctx.globalAlpha = alpha * 0.8;
+                }
+
+                if (trailY > -this.height / 2 && trailY < this.height / 2) {
+                    ctx.fillText(char, -this.width / 2 + i * this.fontSize + this.fontSize / 2, trailY);
+                }
+            }
+
+            // Advance drop
+            drop.y += drop.speed * effectiveSpeed * (0.7 + Math.random() * 0.6);
+
+            // Occasionally randomize trail characters for flicker
+            if (Math.random() < 0.2) {
+                drop.trail[Math.floor(Math.random() * this.trailLength)] = Math.floor(Math.random() * this.characters.length);
+            }
+
+            // Reset drop if off screen or randomly for rainDensity
+            if (drop.y - this.trailLength * this.fontSize > this.height / 2 ||
+                Math.random() > (1 - this.rainDensity * 0.02)) {
+                drop.y = -Math.random() * this.height * 0.3;
+                // New trail
+                drop.trail = Array.from({ length: this.trailLength }, () => Math.floor(Math.random() * this.characters.length));
+                drop.speed = this.fallSpeed * (0.8 + Math.random() * 0.4);
+            }
+        }
+
+        ctx.restore();
+        ctx.globalAlpha = 1;
+    }
+
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            fallSpeed: this.fallSpeed,
+            fontSize: this.fontSize,
+            rainDensity: this.rainDensity,
+            trailLength: this.trailLength
+        };
+    }
+}
+
+class SunburstVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.rayCount = 64;
+        this.innerRadius = 20;
+        this.rotationSpeed = 1;
+        this.colorMode = 'gradient'; // solid, gradient, rainbow
+        this.currentRotation = 0;
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            sunburst: {
+                rayCount: this.rayCount,
+                innerRadius: this.innerRadius,
+                rotationSpeed: this.rotationSpeed,
+                colorMode: this.colorMode
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'sunburst') {
+            if (property === 'colorMode') {
+                this[property] = value;
+            } else {
+                this[property] = parseFloat(value);
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.currentRotation += this.rotationSpeed * this.animationSpeed;
+        ctx.rotate(Utils.toRadians(this.currentRotation));
+
+        const frequencyData = this.getFilteredFrequencyData();
+        const maxRayLength = Math.min(this.width, this.height) / 2 - this.innerRadius;
+
+        for (let i = 0; i < this.rayCount; i++) {
+            const angle = (i / this.rayCount) * 2 * Math.PI;
+            const freqIndex = Math.floor((i / this.rayCount) * ((frequencyData?.length || 1) - 1));
+            const freqValue = (frequencyData && this.reactToAudio) ? (frequencyData[freqIndex] || 0) : 128;
+
+            const rayLength = (freqValue / 255) * maxRayLength * this.sensitivity;
+
+            const x1 = Math.cos(angle) * this.innerRadius;
+            const y1 = Math.sin(angle) * this.innerRadius;
+            const x2 = Math.cos(angle) * (this.innerRadius + rayLength);
+            const y2 = Math.sin(angle) * (this.innerRadius + rayLength);
+
+            let strokeStyle = this.color;
+            if (this.colorMode === 'gradient') {
+                const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                gradient.addColorStop(0, this.color + '00');
+                gradient.addColorStop(1, this.color);
+                strokeStyle = gradient;
+            } else if (this.colorMode === 'rainbow') {
+                strokeStyle = `hsl(${(i / this.rayCount) * 360}, 100%, 50%)`;
+            }
+
+            ctx.strokeStyle = strokeStyle;
+            ctx.lineWidth = (this.width / this.rayCount) * 1.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            rayCount: this.rayCount,
+            innerRadius: this.innerRadius,
+            rotationSpeed: this.rotationSpeed,
+            colorMode: this.colorMode
+        };
+    }
+}
+
+class Equalizer3DVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.barCount = 32;
+        this.barSpacing = 5;
+        this.perspective = 0.7; // 0 to 1
+        this.depth = 50;
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            equalizer3d: {
+                barCount: this.barCount,
+                barSpacing: this.barSpacing,
+                perspective: this.perspective,
+                depth: this.depth
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'equalizer3d') {
+            this[property] = parseFloat(value);
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+
+        ctx.save();
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        const frequencyData = this.getFilteredFrequencyData();
+        const totalBarWidth = this.width / this.barCount;
+        const barWidth = totalBarWidth - this.barSpacing;
+
+        const perspectiveOriginY = -this.height / 2 * (1 - this.perspective);
+
+        for (let i = 0; i < this.barCount; i++) {
+            const freqIndex = Math.floor((i / this.barCount) * ((frequencyData?.length || 1) - 1));
+            const freqValue = (frequencyData && this.reactToAudio) ? (frequencyData[freqIndex] || 0) : 128;
+            const barHeight = Math.max(1, (freqValue / 255) * this.height * this.sensitivity);
+
+            const x = -this.width / 2 + i * totalBarWidth;
+            const y = this.height / 2 - barHeight;
+
+            // Calculate perspective points
+            const topY = y;
+            const bottomY = this.height / 2;
+            const perspectiveTopY = perspectiveOriginY + (topY - perspectiveOriginY) * this.perspective;
+            const perspectiveBottomY = perspectiveOriginY + (bottomY - perspectiveOriginY) * this.perspective;
+            const perspectiveDepth = this.depth * (1 - this.perspective);
+
+            // Bar front face
+            ctx.fillStyle = this.color;
+            ctx.fillRect(x, y, barWidth, barHeight);
+
+            // Bar top face
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + perspectiveDepth, perspectiveTopY);
+            ctx.lineTo(x + barWidth + perspectiveDepth, perspectiveTopY);
+            ctx.lineTo(x + barWidth, y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fill();
+
+            // Bar side face
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.moveTo(x + barWidth, y);
+            ctx.lineTo(x + barWidth + perspectiveDepth, perspectiveTopY);
+            ctx.lineTo(x + barWidth + perspectiveDepth, perspectiveBottomY);
+            ctx.lineTo(x + barWidth, bottomY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            barCount: this.barCount,
+            barSpacing: this.barSpacing,
+            perspective: this.perspective,
+            depth: this.depth
+        };
+    }
+}
+
 // Visualizer factory
 class VisualizerFactory {
     static create(type, x, y, width, height) {
@@ -2308,6 +2654,12 @@ class VisualizerFactory {
                 return new TunnelVisualizer(x, y, width, height);
             case 'fractaltree':
                 return new FractalTreeVisualizer(x, y, width, height);
+            case 'matrix':
+                return new MatrixVisualizer(x, y, width, height);
+            case 'sunburst':
+                return new SunburstVisualizer(x, y, width, height);
+            case 'equalizer3d':
+                return new Equalizer3DVisualizer(x, y, width, height);
             case 'reactiveimage':
                 return new ReactiveImageVisualizer(x, y, width, height);
             default:
@@ -2338,3 +2690,7 @@ window.DNAVisualizer = DNAVisualizer;
 window.FlowerVisualizer = FlowerVisualizer;
 window.TunnelVisualizer = TunnelVisualizer;
 window.FractalTreeVisualizer = FractalTreeVisualizer;
+window.MatrixVisualizer = MatrixVisualizer;
+window.SunburstVisualizer = SunburstVisualizer;
+window.Equalizer3DVisualizer = Equalizer3DVisualizer;
+window.ReactiveImageVisualizer = ReactiveImageVisualizer;

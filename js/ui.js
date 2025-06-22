@@ -554,7 +554,10 @@ class UIManager {
             { type: 'dna', name: 'DNA Helix', icon: 'fas fa-dna', description: 'Double helix DNA structure' },
             { type: 'flower', name: 'Flower', icon: 'fas fa-seedling', description: 'Blooming flower petals' },
             { type: 'tunnel', name: 'Tunnel', icon: 'fas fa-circle-notch', description: '3D tunnel effect' },
-            { type: 'fractaltree', name: 'Fractal Tree', icon: 'fas fa-tree', description: 'Growing fractal tree branches' }
+            { type: 'fractaltree', name: 'Fractal Tree', icon: 'fas fa-tree', description: 'Growing fractal tree branches' },
+            { type: 'matrix', name: 'Matrix Rain', icon: 'fas fa-braille', description: 'Digital rain effect' },
+            { type: 'sunburst', name: 'Sunburst', icon: 'fas fa-certificate', description: 'Radial sunburst rays' },
+            { type: 'equalizer3d', name: '3D Equalizer', icon: 'fas fa-cubes', description: 'Equalizer with 3D perspective' }
         ];
 
         libraryContainer.innerHTML = `
@@ -619,6 +622,9 @@ class UIManager {
             'dna': 'effects',
             'flower': 'effects',
             'tunnel': 'effects',
+            'matrix': 'effects',
+            'sunburst': 'advanced',
+            'equalizer3d': 'advanced',
             'fractaltree': 'effects'
         };
         return categories[type] || 'basic';
