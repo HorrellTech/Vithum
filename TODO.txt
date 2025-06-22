@@ -1,3 +1,4 @@
 - Add more visualizers
 - Add motion blur
 - Add glow effect
+- Add center image controls(center x, center y)

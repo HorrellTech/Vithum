@@ -42,6 +42,22 @@ class CanvasManager {
         this.lastClickTime = 0; // For detecting rapid clicks
         this.clickCycleTimeout = null; // Timeout for resetting cycle
 
+        // Video recording properties
+        this.isRecording = false;
+        this.mediaRecorder = null;
+        this.recordedChunks = [];
+        this.recordingStartTime = 0;
+        this.recordingDuration = 0;
+        this.recordingAnimationId = null;
+
+        // background canvas for recording
+        this.recordingCanvas = null;
+        this.recordingCtx = null;
+        this.recordingStream = null;
+        this.audioContext = null;
+        this.audioDestination = null;
+        this.mixedStream = null;
+
         this.setupCanvas();
         this.bindEvents();
         this.animate();
@@ -83,6 +99,43 @@ class CanvasManager {
         this.displayScale = scale;
     }
 
+    bindExportControls() {
+        // WebM Recording controls
+        const recordBtn = document.getElementById('startRecording');
+        const stopRecordBtn = document.getElementById('stopRecording');
+        const exportImageBtn = document.getElementById('exportImage');
+
+        if (recordBtn) {
+            recordBtn.addEventListener('click', () => {
+                if (!this.isRecording) {
+                    // Get recording options from UI
+                    const duration = parseInt(document.getElementById('recordingDuration')?.value || 10) * 1000;
+                    const fps = parseInt(document.getElementById('recordingFPS')?.value || 30);
+                    const bitrate = parseInt(document.getElementById('recordingBitrate')?.value || 2500) * 1000;
+
+                    this.startRecording({ duration, fps, bitrate });
+                } else {
+                    // If already recording, stop it
+                    this.stopRecording();
+                }
+            });
+        }
+
+        if (stopRecordBtn) {
+            stopRecordBtn.addEventListener('click', () => {
+                console.log('Stop recording button clicked');
+                this.stopRecording();
+            });
+        }
+
+        if (exportImageBtn) {
+            exportImageBtn.addEventListener('click', () => {
+                const format = document.getElementById('imageFormat')?.value || 'png';
+                this.exportAsImage(format);
+            });
+        }
+    }
+
     bindEvents() {
         // Mouse events - bind to document for better drag handling
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
@@ -110,7 +163,12 @@ class CanvasManager {
         document.getElementById('videoAreaHeight').addEventListener('change', () => this.updateVideoAreaSize());
         document.getElementById('toggleVideoArea').addEventListener('click', () => this.toggleVideoArea());
         document.getElementById('centerVideoArea').addEventListener('click', () => this.centerVideoArea());
-    } getMousePos(e) {
+
+        // Add export controls binding
+        this.bindExportControls();
+    }
+
+    getMousePos(e) {
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
         const scaleY = this.canvas.height / rect.height;
@@ -1181,7 +1239,8 @@ class CanvasManager {
 
         const properties = visualizer.getProperties();
 
-        content.innerHTML = `
+        // Build the base properties HTML
+        let propertiesHTML = `
         <div class="property-group">
             <h4>Layer Management</h4>
             <div class="property-item">
@@ -1324,8 +1383,11 @@ class CanvasManager {
                 <small>Frequency Range: ${properties.audio.minFrequency}% - ${properties.audio.maxFrequency}%</small>
             </div>
         </div>
+    `;
 
-        ${visualizer.constructor.name === 'KaleidoscopeVisualizer' ? `
+        // Add specific visualizer properties
+        if (visualizer.constructor.name === 'KaleidoscopeVisualizer') {
+            propertiesHTML += `
             <div class="property-group">
                 <h4>Kaleidoscope Settings</h4>
                 <div class="property-item">
@@ -1399,8 +1461,150 @@ class CanvasManager {
                     </label>
                 </div>
             </div>
-            ` : ''}
-        
+        `;
+        }
+
+        if (visualizer.constructor.name === 'FractalTreeVisualizer') {
+            propertiesHTML += `
+            <div class="property-group">
+                <h4>Fractal Tree Settings</h4>
+                <div class="property-item">
+                    <label class="property-label">Max Depth</label>
+                    <input type="range" class="property-input property-range" value="${properties.fractalTree.maxDepth}" 
+                        data-category="fractalTree" data-property="maxDepth" min="3" max="10" step="1">
+                    <span class="range-value">${properties.fractalTree.maxDepth}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Branch Angle</label>
+                    <input type="range" class="property-input property-range" value="${properties.fractalTree.branchAngle}" 
+                        data-category="fractalTree" data-property="branchAngle" min="10" max="60" step="1">
+                    <span class="range-value">${properties.fractalTree.branchAngle}°</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Branch Ratio</label>
+                    <input type="range" class="property-input property-range" value="${properties.fractalTree.branchRatio}" 
+                        data-category="fractalTree" data-property="branchRatio" min="0.5" max="0.9" step="0.05">
+                    <span class="range-value">${properties.fractalTree.branchRatio}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Trunk Length</label>
+                    <input type="range" class="property-input property-range" value="${properties.fractalTree.trunkLength}" 
+                        data-category="fractalTree" data-property="trunkLength" min="0.1" max="0.5" step="0.05">
+                    <span class="range-value">${Math.round(properties.fractalTree.trunkLength * 100)}%</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Wind Strength</label>
+                    <input type="range" class="property-input property-range" value="${properties.fractalTree.windStrength}" 
+                        data-category="fractalTree" data-property="windStrength" min="0" max="3" step="0.1">
+                    <span class="range-value">${properties.fractalTree.windStrength}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Growth Speed</label>
+                    <input type="range" class="property-input property-range" value="${properties.fractalTree.growthSpeed}" 
+                        data-category="fractalTree" data-property="growthSpeed" min="0.1" max="2" step="0.1">
+                    <span class="range-value">${properties.fractalTree.growthSpeed}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" ${properties.fractalTree.colorVariation ? 'checked' : ''} 
+                            data-category="fractalTree" data-property="colorVariation"> 
+                        Color Variation by Depth
+                    </label>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" ${properties.fractalTree.leafMode ? 'checked' : ''} 
+                            data-category="fractalTree" data-property="leafMode"> 
+                        Show Leaves
+                    </label>
+                </div>
+            </div>
+        `;
+        }
+
+        // Add ReactiveImageVisualizer properties
+        if (visualizer instanceof ReactiveImageVisualizer) {
+            propertiesHTML += `
+            <div class="property-group">
+                <h4>Image Settings</h4>
+                <div class="property-item">
+                    <label class="property-label">Load Image</label>
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                    <button onclick="document.getElementById('imageUpload').click()" class="btn-small">
+                        Choose Image
+                    </button>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Shape</label>
+                    <select class="property-input" data-category="image" data-property="shape">
+                        <option value="rectangle" ${properties.image.shape === 'rectangle' ? 'selected' : ''}>Rectangle</option>
+                        <option value="circle" ${properties.image.shape === 'circle' ? 'selected' : ''}>Circle</option>
+                        <option value="square" ${properties.image.shape === 'square' ? 'selected' : ''}>Square</option>
+                    </select>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" class="property-input" 
+                            data-category="image" data-property="maskMode" ${properties.image.maskMode ? 'checked' : ''}>
+                        Mask to Shape
+                    </label>
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <h4>Reactive Scale</h4>
+                <div class="property-item">
+                    <label class="property-label">Scale Strength</label>
+                    <input type="range" class="property-input property-range" value="${properties.image.reactiveScaleStrength}" 
+                        data-category="image" data-property="reactiveScaleStrength" min="0" max="2" step="0.1">
+                    <span class="range-value">${properties.image.reactiveScaleStrength}</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Scale Smoothing</label>
+                    <input type="range" class="property-input property-range" value="${properties.image.scaleSmoothing}" 
+                        data-category="image" data-property="scaleSmoothing" min="0" max="1" step="0.1">
+                    <span class="range-value">${Math.round(properties.image.scaleSmoothing * 100)}%</span>
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <h4>Flash Effect</h4>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" class="property-input" 
+                            data-category="image" data-property="flashEnabled" ${properties.image.flashEnabled ? 'checked' : ''}>
+                        Enable Flash
+                    </label>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Flash Color</label>
+                    <input type="color" class="property-input property-color" value="${properties.image.flashColor}" 
+                        data-category="image" data-property="flashColor">
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Flash Intensity</label>
+                    <input type="range" class="property-input property-range" value="${properties.image.flashIntensity}" 
+                        data-category="image" data-property="flashIntensity" min="0" max="1" step="0.1">
+                    <span class="range-value">${Math.round(properties.image.flashIntensity * 100)}%</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Flash Threshold</label>
+                    <input type="range" class="property-input property-range" value="${properties.image.flashThreshold}" 
+                        data-category="image" data-property="flashThreshold" min="0" max="1" step="0.1">
+                    <span class="range-value">${Math.round(properties.image.flashThreshold * 100)}%</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Flash Speed</label>
+                    <input type="range" class="property-input property-range" value="${properties.image.flashSpeed}" 
+                        data-category="image" data-property="flashSpeed" min="0.1" max="5" step="0.1">
+                    <span class="range-value">${properties.image.flashSpeed}</span>
+                </div>
+            </div>
+        `;
+        }
+
+        // Add keyboard shortcuts
+        propertiesHTML += `
         <div class="property-group">
             <h4>Keyboard Shortcuts</h4>
             <div class="shortcuts-info">
@@ -1425,6 +1629,30 @@ class CanvasManager {
             </div>
         </div>
     `;
+
+        // Set the final HTML
+        content.innerHTML = propertiesHTML;
+
+        // Add event listener for image upload if it's a ReactiveImageVisualizer
+        if (visualizer instanceof ReactiveImageVisualizer) {
+            setTimeout(() => {
+                const imageUpload = document.getElementById('imageUpload');
+                if (imageUpload) {
+                    imageUpload.addEventListener('change', async (e) => {
+                        const file = e.target.files[0];
+                        if (file && visualizer instanceof ReactiveImageVisualizer) {
+                            try {
+                                await visualizer.loadImage(file);
+                                console.log('Image loaded successfully');
+                            } catch (error) {
+                                console.error('Failed to load image:', error);
+                                alert('Failed to load image. Please try again.');
+                            }
+                        }
+                    });
+                }
+            }, 100);
+        }
 
         // Bind layer management events
         const bringToFrontBtn = document.getElementById('bringToFront');
@@ -1569,6 +1797,656 @@ class CanvasManager {
         return null;
     }
 
+    createRecordingCanvas() {
+        if (!this.recordingCanvas) {
+            this.recordingCanvas = document.createElement('canvas');
+            this.recordingCtx = this.recordingCanvas.getContext('2d');
+
+            // Set canvas size to video area if visible, otherwise use main canvas size
+            if (this.videoArea.visible) {
+                this.recordingCanvas.width = this.videoArea.width;
+                this.recordingCanvas.height = this.videoArea.height;
+            } else {
+                this.recordingCanvas.width = this.canvas.width;
+                this.recordingCanvas.height = this.canvas.height;
+            }
+
+            console.log(`Created recording canvas: ${this.recordingCanvas.width}x${this.recordingCanvas.height}`);
+
+            // Render initial frame
+            this.renderToRecordingCanvas();
+        }
+        return this.recordingCanvas;
+    }
+
+    renderToRecordingCanvas() {
+        if (!this.recordingCanvas || !this.recordingCtx) {
+            console.warn('Recording canvas not available');
+            return;
+        }
+
+        // Clear the recording canvas
+        this.recordingCtx.clearRect(0, 0, this.recordingCanvas.width, this.recordingCanvas.height);
+
+        // Fill with black background
+        this.recordingCtx.fillStyle = '#000000';
+        this.recordingCtx.fillRect(0, 0, this.recordingCanvas.width, this.recordingCanvas.height);
+
+        this.recordingCtx.save();
+
+        // Calculate transformations for video area mapping
+        let offsetX = 0;
+        let offsetY = 0;
+        let scaleX = 1;
+        let scaleY = 1;
+
+        if (this.videoArea.visible) {
+            // Map from video area coordinates to recording canvas
+            offsetX = -this.videoArea.x;
+            offsetY = -this.videoArea.y;
+            scaleX = this.recordingCanvas.width / this.videoArea.width;
+            scaleY = this.recordingCanvas.height / this.videoArea.height;
+
+            // Apply transformations
+            this.recordingCtx.scale(scaleX, scaleY);
+            this.recordingCtx.translate(offsetX, offsetY);
+        }
+
+        // Render all visible visualizers
+        this.visualizers.forEach(visualizer => {
+            if (visualizer.visible) {
+                visualizer.render(this.recordingCtx);
+            }
+        });
+
+        this.recordingCtx.restore();
+
+        // Add a subtle frame indicator to ensure each frame is unique
+        if (this.isRecording) {
+            this.recordingCtx.save();
+            this.recordingCtx.globalAlpha = 0.001;
+            this.recordingCtx.fillStyle = `hsl(${Date.now() % 360}, 50%, 50%)`;
+            this.recordingCtx.fillRect(0, 0, 1, 1);
+            this.recordingCtx.restore();
+        }
+    }
+
+    async startRecording(options = {}) {
+        if (this.isRecording) {
+            console.warn('Recording already in progress');
+            return;
+        }
+
+        try {
+            // Update UI buttons
+            const recordBtn = document.getElementById('startRecording');
+            const stopRecordBtn = document.getElementById('stopRecording');
+
+            if (recordBtn) {
+                recordBtn.textContent = 'Stop Recording';
+                recordBtn.classList.add('recording');
+            }
+
+            if (stopRecordBtn) {
+                stopRecordBtn.disabled = false;
+            }
+
+            // Default recording options
+            const recordingOptions = {
+                duration: options.duration || 10000,
+                fps: options.fps || 30,
+                videoBitsPerSecond: options.bitrate || 2500000
+            };
+
+            console.log('Starting recording with options:', recordingOptions);
+
+            // Create and setup recording canvas
+            this.createRecordingCanvas();
+
+            // Start audio playback if not already playing and we have audio
+            if (window.app && window.app.audio) {
+                if (!window.app.audio.isPlaying) {
+                    console.log('Starting audio playback for recording...');
+                    try {
+                        await window.app.audio.play();
+                        // Give audio a moment to stabilize
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    } catch (audioError) {
+                        console.warn('Could not start audio playback:', audioError);
+                    }
+                }
+            }
+
+            // IMPROVED: Start recording loop FIRST to ensure canvas is actively updating
+            this.isRecording = true; // Set this early so renderToRecordingCanvas works
+            this.startRecordingLoop();
+
+            // Render multiple initial frames with delays to ensure canvas stream is active
+            for (let i = 0; i < 10; i++) {
+                this.renderToRecordingCanvas();
+                await new Promise(resolve => setTimeout(resolve, 33)); // ~30fps
+            }
+
+            // Get video stream from recording canvas with explicit frame rate
+            const videoStream = this.recordingCanvas.captureStream(recordingOptions.fps);
+            console.log('Video stream created:', videoStream);
+            console.log('Video tracks:', videoStream.getVideoTracks());
+
+            // Ensure video stream is active
+            const videoTrack = videoStream.getVideoTracks()[0];
+            if (videoTrack) {
+                console.log('Video track state:', videoTrack.readyState);
+                console.log('Video track settings:', videoTrack.getSettings());
+            }
+
+            // Get audio stream if available
+            let audioStream = null;
+            if (window.app && window.app.audio && window.app.audio.audioContext) {
+                try {
+                    // Create audio destination for recording
+                    this.audioDestination = window.app.audio.audioContext.createMediaStreamDestination();
+
+                    // Connect the audio source to the destination
+                    if (window.app.audio.audioSource) {
+                        window.app.audio.audioSource.connect(this.audioDestination);
+                        console.log('Audio source connected to recording destination');
+                    } else if (window.app.audio.analyser) {
+                        // Fallback: connect analyser to destination
+                        window.app.audio.analyser.connect(this.audioDestination);
+                        console.log('Audio analyser connected to recording destination');
+                    }
+
+                    audioStream = this.audioDestination.stream;
+                    console.log('Audio stream created:', audioStream);
+                    console.log('Audio tracks:', audioStream.getAudioTracks());
+                } catch (audioError) {
+                    console.warn('Failed to capture audio stream:', audioError);
+                }
+            }
+
+            // Combine video and audio streams
+            let combinedStream;
+            if (audioStream && audioStream.getAudioTracks().length > 0) {
+                combinedStream = new MediaStream([
+                    ...videoStream.getVideoTracks(),
+                    ...audioStream.getAudioTracks()
+                ]);
+                console.log('Recording with audio - combined tracks:', combinedStream.getTracks().length);
+            } else {
+                combinedStream = videoStream;
+                console.log('Recording video only - tracks:', combinedStream.getTracks().length);
+            }
+
+            // Check if we have any tracks
+            if (combinedStream.getTracks().length === 0) {
+                throw new Error('No video or audio tracks available for recording');
+            }
+
+            // Verify tracks are active
+            combinedStream.getTracks().forEach((track, index) => {
+                console.log(`Track ${index}: ${track.kind}, state: ${track.readyState}, enabled: ${track.enabled}`);
+            });
+
+            // Create media recorder with better codec selection
+            let mimeType;
+            const codecs = [
+                'video/webm;codecs=vp8,opus',
+                'video/webm;codecs=vp8',
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp9',
+                'video/webm',
+                'video/mp4'
+            ];
+
+            for (const codec of codecs) {
+                if (MediaRecorder.isTypeSupported(codec)) {
+                    mimeType = codec;
+                    break;
+                }
+            }
+
+            if (!mimeType) {
+                throw new Error('No supported video codec found');
+            }
+
+            console.log('Using mime type:', mimeType);
+
+            this.mediaRecorder = new MediaRecorder(combinedStream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: recordingOptions.videoBitsPerSecond,
+                audioBitsPerSecond: audioStream ? 128000 : undefined
+            });
+
+            // Reset chunks array and frame counter
+            this.recordedChunks = [];
+            this.recordingFrameCount = 0;
+
+            // IMPROVED: Handle data available with better error checking
+            this.mediaRecorder.ondataavailable = (event) => {
+                console.log('Data available:', event.data.size, 'bytes', 'type:', event.data.type);
+                if (event.data && event.data.size > 0) {
+                    this.recordedChunks.push(event.data);
+                    console.log(`Chunk ${this.recordedChunks.length} added, total chunks: ${this.recordedChunks.length}`);
+                } else {
+                    console.warn('Received empty or invalid data chunk:', event.data);
+                }
+            };
+
+            // Handle recording stop
+            this.mediaRecorder.onstop = () => {
+                console.log('MediaRecorder stopped, chunks:', this.recordedChunks.length);
+                // Add small delay to ensure all data is processed
+                setTimeout(() => {
+                    this.handleRecordingComplete();
+                    this.cleanupRecording();
+                }, 100);
+            };
+
+            // Handle errors
+            this.mediaRecorder.onerror = (event) => {
+                console.error('MediaRecorder error:', event.error);
+                this.cleanupRecording();
+            };
+
+            // Handle recording start
+            this.mediaRecorder.onstart = () => {
+                console.log('MediaRecorder started successfully');
+            };
+
+            // IMPROVED: Start recording with smaller timeslice for more frequent data capture
+            const timeslice = 100; // Capture data every 100ms
+            console.log('Starting MediaRecorder with timeslice:', timeslice);
+            this.mediaRecorder.start(timeslice);
+
+            console.log('MediaRecorder started with state:', this.mediaRecorder.state);
+
+            // Set recording duration and auto-stop
+            this.recordingStartTime = Date.now();
+            this.recordingDuration = recordingOptions.duration;
+
+            this.recordingTimeout = setTimeout(() => {
+                if (this.isRecording) {
+                    console.log('Auto-stopping recording after duration');
+                    this.stopRecording();
+                }
+            }, recordingOptions.duration);
+
+            // Show recording indicator
+            this.showRecordingIndicator();
+
+            console.log(`Started recording: ${recordingOptions.duration / 1000}s at ${recordingOptions.fps} FPS`);
+
+            // IMPROVED: Multiple data requests to ensure capture
+            const requestInitialData = () => {
+                if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                    this.mediaRecorder.requestData();
+                    console.log('Requested data capture');
+                }
+            };
+
+            // Request data multiple times initially
+            setTimeout(requestInitialData, 100);
+            setTimeout(requestInitialData, 500);
+            setTimeout(requestInitialData, 1000);
+
+        } catch (error) {
+            console.error('Failed to start recording:', error);
+            this.isRecording = false; // Reset recording state
+            this.cleanupRecording();
+
+            if (window.app) {
+                window.app.showNotification(
+                    'Recording Failed',
+                    `Unable to start recording: ${error.message}`,
+                    'error',
+                    4000
+                );
+            }
+        }
+    }
+
+    startRecordingLoop() {
+        if (!this.isRecording) return;
+
+        // Render frame to recording canvas
+        this.renderToRecordingCanvas();
+
+        // IMPROVED: More robust frame updating
+        const ctx = this.recordingCtx;
+        if (ctx) {
+            // Add a tiny, nearly invisible timestamp to ensure frames are different
+            ctx.save();
+            ctx.globalAlpha = 0.001;
+            ctx.fillStyle = `hsl(${Date.now() % 360}, 50%, 50%)`;
+            ctx.fillRect(Date.now() % this.recordingCanvas.width, 0, 1, 1);
+            ctx.restore();
+
+            // Increment frame counter
+            this.recordingFrameCount = (this.recordingFrameCount || 0) + 1;
+
+            // IMPROVED: More frequent data requests
+            if (this.recordingFrameCount % 30 === 0) { // Every 30 frames instead of 60
+                console.log(`Recording frame ${this.recordingFrameCount}`);
+
+                // Request data more frequently to ensure capture
+                if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                    this.mediaRecorder.requestData();
+                    console.log('Requested periodic data capture');
+                }
+            }
+        }
+
+        // Continue loop at consistent intervals
+        this.recordingAnimationId = requestAnimationFrame(() => {
+            this.startRecordingLoop();
+        });
+    }
+
+    stopRecording() {
+        if (!this.isRecording || !this.mediaRecorder) {
+            console.log('Stop recording called but not recording or no recorder');
+            return;
+        }
+
+        try {
+            console.log('Stopping recording manually...');
+
+            // Clear timeout if it exists
+            if (this.recordingTimeout) {
+                clearTimeout(this.recordingTimeout);
+                this.recordingTimeout = null;
+            }
+
+            // IMPROVED: Better final data capture
+            if (this.mediaRecorder.state === 'recording') {
+                // Request final data multiple times
+                this.mediaRecorder.requestData();
+                console.log('Requested final data before stopping');
+
+                // Give more time for final data capture
+                setTimeout(() => {
+                    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                        console.log('Final chunks before stop:', this.recordedChunks.length);
+                        this.mediaRecorder.stop();
+                    }
+                }, 200); // Increased delay
+            } else if (this.mediaRecorder.state === 'paused') {
+                this.mediaRecorder.resume();
+                setTimeout(() => {
+                    this.mediaRecorder.requestData();
+                    setTimeout(() => {
+                        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                            this.mediaRecorder.stop();
+                        }
+                    }, 200);
+                }, 100);
+            }
+
+            this.isRecording = false;
+            this.hideRecordingIndicator();
+
+            // Stop recording loop after a delay to capture final frames
+            setTimeout(() => {
+                if (this.recordingAnimationId) {
+                    cancelAnimationFrame(this.recordingAnimationId);
+                    this.recordingAnimationId = null;
+                }
+            }, 300);
+
+            console.log('Recording stopped manually, waiting for data...');
+        } catch (error) {
+            console.error('Error stopping recording:', error);
+            this.cleanupRecording();
+        }
+    }
+
+    handleRecordingComplete() {
+        console.log('Handling recording completion, chunks:', this.recordedChunks.length);
+
+        // IMPROVED: Better error handling and debugging
+        if (this.recordedChunks.length === 0) {
+            console.error('No recorded data available');
+            console.log('MediaRecorder final state:', this.mediaRecorder?.state);
+            console.log('Recording frame count:', this.recordingFrameCount);
+            console.log('Recording duration:', Date.now() - this.recordingStartTime, 'ms');
+
+            if (window.app) {
+                window.app.showNotification(
+                    'Recording Failed',
+                    'No video data was captured. This might be due to browser compatibility issues or insufficient recording duration. Try recording for longer or use a different browser.',
+                    'error',
+                    7000
+                );
+            }
+            return;
+        }
+
+        try {
+            // Calculate total size
+            const totalSize = this.recordedChunks.reduce((total, chunk) => total + chunk.size, 0);
+            console.log(`Processing ${this.recordedChunks.length} chunks, total size: ${totalSize} bytes`);
+
+            if (totalSize === 0) {
+                throw new Error('All recorded chunks are empty');
+            }
+
+            // Use the same mime type that was used for recording
+            let mimeType = 'video/webm';
+            if (this.mediaRecorder && this.mediaRecorder.mimeType) {
+                mimeType = this.mediaRecorder.mimeType;
+            }
+
+            console.log('Creating blob with mime type:', mimeType);
+
+            // Create blob from recorded chunks
+            const blob = new Blob(this.recordedChunks, { type: mimeType });
+            console.log('Blob created, size:', blob.size);
+
+            if (blob.size === 0) {
+                throw new Error('Created blob is empty');
+            }
+
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+            const filename = `vithum-recording-${timestamp}.${extension}`;
+
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+
+            // Force download
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Clean up URL after a longer delay
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            this.recordedChunks = [];
+
+            // Show completion notification
+            if (window.app) {
+                const hasAudio = this.audioDestination ? 'with audio' : 'video only';
+                const sizeInMB = (blob.size / (1024 * 1024)).toFixed(2);
+                const frameCount = this.recordingFrameCount || 0;
+                window.app.showNotification(
+                    'Recording Complete',
+                    `Video saved as ${filename} (${hasAudio}, ${sizeInMB}MB, ${frameCount} frames)`,
+                    'success',
+                    5000
+                );
+            }
+
+            console.log(`Recording saved: ${filename} (${blob.size} bytes, ${this.recordingFrameCount} frames)`);
+
+        } catch (error) {
+            console.error('Error processing recording:', error);
+
+            if (window.app) {
+                window.app.showNotification(
+                    'Export Failed',
+                    `Failed to save recording: ${error.message}`,
+                    'error',
+                    5000
+                );
+            }
+        }
+    }
+
+    showRecordingIndicator() {
+        // Remove existing indicator
+        this.hideRecordingIndicator();
+
+        // Create recording indicator
+        const indicator = document.createElement('div');
+        indicator.id = 'recordingIndicator';
+        indicator.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 0, 0, 0.9);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        user-select: none;
+    `;
+
+        // Add pulsing red dot
+        const dot = document.createElement('div');
+        dot.style.cssText = `
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+        animation: pulse 1s infinite;
+        pointer-events: none;
+    `;
+
+        // Add text
+        const text = document.createElement('span');
+        text.textContent = 'REC';
+        text.style.pointerEvents = 'none';
+
+        // Add pulse animation
+        if (!document.getElementById('recordingPulseStyle')) {
+            const style = document.createElement('style');
+            style.id = 'recordingPulseStyle';
+            style.textContent = `
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.3; }
+            }
+        `;
+            document.head.appendChild(style);
+        }
+
+        indicator.appendChild(dot);
+        indicator.appendChild(text);
+
+        // Add hover effect
+        indicator.addEventListener('mouseenter', () => {
+            indicator.style.background = 'rgba(255, 0, 0, 1)';
+            text.textContent = 'STOP';
+        });
+
+        indicator.addEventListener('mouseleave', () => {
+            indicator.style.background = 'rgba(255, 0, 0, 0.9)';
+            const elapsed = Date.now() - this.recordingStartTime;
+            const remaining = Math.max(0, this.recordingDuration - elapsed);
+            const seconds = Math.ceil(remaining / 1000);
+            text.textContent = `REC ${seconds}s`;
+        });
+
+        // Add click handler to stop recording
+        indicator.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Recording indicator clicked - stopping recording');
+            this.stopRecording();
+        });
+
+        document.body.appendChild(indicator);
+
+        // Update timer
+        this.updateRecordingTimer();
+    }
+
+    updateRecordingTimer() {
+        if (!this.isRecording) return;
+
+        const indicator = document.getElementById('recordingIndicator');
+        if (!indicator) return;
+
+        const textSpan = indicator.querySelector('span');
+        if (!textSpan) return;
+
+        const elapsed = Date.now() - this.recordingStartTime;
+        const remaining = Math.max(0, this.recordingDuration - elapsed);
+        const seconds = Math.ceil(remaining / 1000);
+
+        // Only update if not hovering (to avoid overriding "STOP" text)
+        if (!indicator.matches(':hover')) {
+            textSpan.textContent = `REC ${seconds}s`;
+        }
+
+        if (remaining > 0) {
+            setTimeout(() => this.updateRecordingTimer(), 100);
+        }
+    }
+
+    hideRecordingIndicator() {
+        const indicator = document.getElementById('recordingIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    exportAsImage(format = 'png') {
+        try {
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+            link.download = `vithum-canvas-${timestamp}.${format}`;
+            link.href = this.canvas.toDataURL(`image/${format}`);
+            link.click();
+
+            if (window.app) {
+                window.app.showNotification(
+                    'Image Exported',
+                    `Canvas saved as ${format.toUpperCase()}`,
+                    'success',
+                    2000
+                );
+            }
+        } catch (error) {
+            console.error('Failed to export image:', error);
+
+            if (window.app) {
+                window.app.showNotification(
+                    'Export Failed',
+                    'Failed to export canvas as image',
+                    'error',
+                    3000
+                );
+            }
+        }
+    }
+
     render() {
         // Clear canvas
         this.ctx.save();
@@ -1579,11 +2457,13 @@ class CanvasManager {
         this.ctx.scale(this.zoom, this.zoom);
         this.ctx.translate(this.panX, this.panY);
 
-        // Always render video area FIRST (behind visualizers) - whether visible or not
-        this.renderVideoArea();
+        // Render video area (only on main canvas, not recording canvas)
+        if (this.ctx === this.canvas.getContext('2d')) {
+            this.renderVideoArea();
+        }
 
-        // Render snap guides if snapping
-        if (this.isSnapping && this.showSnapGuides) {
+        // Render snap guides if snapping (only on main canvas)
+        if (this.isSnapping && this.showSnapGuides && this.ctx === this.canvas.getContext('2d')) {
             this.renderSnapGuides();
         }
 
@@ -1592,15 +2472,15 @@ class CanvasManager {
             if (visualizer.visible) {
                 visualizer.render(this.ctx);
 
-                // Add visual indicator for non-selectable items
-                if (!visualizer.selectable) {
+                // Add visual indicator for non-selectable items (only on main canvas)
+                if (!visualizer.selectable && this.ctx === this.canvas.getContext('2d')) {
                     this.renderLockIndicator(visualizer);
                 }
             }
         });
 
-        // Render selection outline and handles (on top)
-        if (this.selectedVisualizer) {
+        // Render selection outline and handles (only on main canvas)
+        if (this.selectedVisualizer && this.ctx === this.canvas.getContext('2d')) {
             this.renderSelection();
         }
 
@@ -1815,37 +2695,40 @@ class CanvasManager {
         };
     }
 
-    deserialize(data) {
-        this.visualizers = [];
-        this.selectedVisualizer = null;
+    async deserialize(data) {
+        try {
+            this.clear();
 
-        if (data.visualizers) {
-            data.visualizers.forEach(vData => {
-                try {
-                    const visualizer = VisualizerFactory.create(
-                        vData.type.replace('Visualizer', '').toLowerCase(),
-                        vData.x, vData.y, vData.width, vData.height
-                    );
-                    visualizer.deserialize(vData);
-                    this.visualizers.push(visualizer);
-                } catch (error) {
-                    console.error('Failed to restore visualizer:', error);
+            if (data.visualizers && Array.isArray(data.visualizers)) {
+                for (const vizData of data.visualizers) {
+                    try {
+                        const visualizer = VisualizerFactory.create(
+                            vizData.type.replace('Visualizer', '').toLowerCase(),
+                            vizData.x, vizData.y, vizData.width, vizData.height
+                        );
+
+                        // Handle async deserialization for ReactiveImageVisualizer
+                        if (visualizer instanceof ReactiveImageVisualizer) {
+                            await visualizer.deserialize(vizData);
+                        } else {
+                            visualizer.deserialize(vizData);
+                        }
+
+                        this.visualizers.push(visualizer);
+                    } catch (error) {
+                        console.error('Failed to create visualizer:', error);
+                    }
                 }
-            });
-        }
+            }
 
-        if (data.zoom !== undefined) this.setZoom(data.zoom);
-        if (data.panX !== undefined) this.panX = data.panX;
-        if (data.panY !== undefined) this.panY = data.panY;
-        if (data.canvasWidth) document.getElementById('canvasWidth').value = data.canvasWidth;
-        if (data.canvasHeight) document.getElementById('canvasHeight').value = data.canvasHeight;
+            console.log(`Loaded ${this.visualizers.length} visualizers`);
 
-        this.resizeCanvas();
+            if (this.visualizers.length === 0) {
+                this.showDropZone();
+            }
 
-        if (this.visualizers.length === 0) {
-            this.showDropZone();
-        } else {
-            this.hideDropZone();
+        } catch (error) {
+            console.error('Failed to deserialize canvas data:', error);
         }
     }
 

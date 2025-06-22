@@ -23,7 +23,7 @@ class UIManager {
         // Set CSS custom properties for panel widths
         document.documentElement.style.setProperty('--left-panel-width', this.leftPanelWidth + 'px');
         document.documentElement.style.setProperty('--right-panel-width', this.rightPanelWidth + 'px');
-        
+
         // Apply initial panel widths
         const leftPanel = document.querySelector('.left-panel');
         const rightPanel = document.querySelector('.right-panel');
@@ -33,15 +33,15 @@ class UIManager {
         if (leftPanel) {
             leftPanel.style.width = this.leftPanelWidth + 'px';
         }
-        
+
         if (rightPanel) {
             rightPanel.style.width = this.rightPanelWidth + 'px';
         }
-        
+
         if (leftHandle) {
             leftHandle.style.left = (this.leftPanelWidth - 2) + 'px';
         }
-        
+
         if (rightHandle) {
             rightHandle.style.right = (this.rightPanelWidth - 2) + 'px';
         }
@@ -50,7 +50,7 @@ class UIManager {
     bindEvents() {
         // Get audio element reference - it might not exist yet
         this.audioElement = document.getElementById('audioElement') || document.querySelector('audio');
-        
+
         // Only bind audio events if audio element exists
         if (this.audioElement) {
             // Remove existing listeners to prevent duplicates
@@ -59,7 +59,7 @@ class UIManager {
             this.audioElement.removeEventListener('pause', this.handlePause);
             this.audioElement.removeEventListener('ended', this.handleEnded);
             this.audioElement.removeEventListener('error', this.handleError);
-            
+
             // Add fresh listeners
             this.audioElement.addEventListener('loadeddata', this.handleLoadedData);
             this.audioElement.addEventListener('play', this.handlePlay);
@@ -67,13 +67,13 @@ class UIManager {
             this.audioElement.addEventListener('ended', this.handleEnded);
             this.audioElement.addEventListener('error', this.handleError);
         }
-        
+
         // File input (remove and re-add to prevent duplicates)
         const audioFileInput = document.getElementById('audioFile');
         if (audioFileInput) {
             audioFileInput.removeEventListener('change', this.handleFileChange);
             audioFileInput.addEventListener('change', this.handleFileChange);
-            
+
             // Also handle when the dialog is cancelled (no file selected)
             audioFileInput.addEventListener('cancel', () => {
                 console.log('Audio file selection cancelled');
@@ -179,7 +179,7 @@ class UIManager {
             'zoomIn', 'zoomOut', 'resetZoom', 'fullscreen',
             'toggleLeftPanel', 'toggleBottomPanel'
         ];
-        
+
         buttonsToClean.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -310,10 +310,10 @@ class UIManager {
 
     formatTime(seconds) {
         if (isNaN(seconds) || seconds === 0) return '0:00';
-        
+
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = Math.floor(seconds % 60);
-        
+
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
 
@@ -503,8 +503,8 @@ class UIManager {
 
         // Bind property change events
         this.bindPropertyEvents(visualizer);
-    } 
-    
+    }
+
     populateVisualizerLibrary() {
         const libraryContainer = document.getElementById('visualizerLibrary');
         if (!libraryContainer) return;
@@ -516,9 +516,10 @@ class UIManager {
             { type: 'circle', name: 'Circle', icon: 'fas fa-circle', description: 'Pulsing circle visualizer' },
             { type: 'spiral', name: 'Spiral', icon: 'fas fa-hurricane', description: 'Animated spiral pattern' },
             { type: 'radial', name: 'Radial', icon: 'fas fa-sun', description: 'Radial frequency lines' },
-            { type: 'spectrum', name: 'Spectrum', icon: 'fas fa-signal', description: 'Gradient spectrum analyzer' },
-            
+            { type: 'reactiveimage', name: 'Reactive Image', icon: 'fas fa-image', description: 'Audio-reactive image with effects' },
+
             // Advanced visualizers
+            { type: 'spectrum', name: 'Spectrum', icon: 'fas fa-signal', description: 'Gradient spectrum analyzer' },
             { type: 'particles', name: 'Particles', icon: 'fas fa-atom', description: 'Animated particle system' },
             { type: 'wave', name: 'Wave Layers', icon: 'fas fa-water', description: 'Layered wave patterns' },
             { type: 'lissajous', name: 'Lissajous', icon: 'fas fa-infinity', description: 'Mathematical curves with trails' },
@@ -579,7 +580,7 @@ class UIManager {
     getVisualizerCategory(type) {
         const categories = {
             'waveform': 'basic',
-            'frequency': 'basic', 
+            'frequency': 'basic',
             'circle': 'basic',
             'spiral': 'basic',
             'radial': 'basic',
@@ -603,7 +604,7 @@ class UIManager {
     setupLibraryFiltering() {
         const searchInput = document.getElementById('visualizerSearch');
         const categoryBtns = document.querySelectorAll('.category-btn');
-        
+
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.filterVisualizers(e.target.value, this.currentCategory);
@@ -615,7 +616,7 @@ class UIManager {
                 // Update active state
                 categoryBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 this.currentCategory = btn.dataset.category;
                 this.filterVisualizers(searchInput?.value || '', this.currentCategory);
             });
@@ -637,8 +638,8 @@ class UIManager {
             const description = item.querySelector('.visualizer-desc')?.textContent.toLowerCase() || '';
             const itemCategory = item.dataset.category;
 
-            const matchesSearch = !searchTerm || 
-                name.includes(searchTerm.toLowerCase()) || 
+            const matchesSearch = !searchTerm ||
+                name.includes(searchTerm.toLowerCase()) ||
                 description.includes(searchTerm.toLowerCase()) ||
                 type.includes(searchTerm.toLowerCase());
 
@@ -658,7 +659,7 @@ class UIManager {
 
     toggleNoResultsMessage(show) {
         let noResultsEl = document.querySelector('.no-results');
-        
+
         if (show && !noResultsEl) {
             noResultsEl = document.createElement('div');
             noResultsEl.className = 'no-results';
@@ -676,7 +677,7 @@ class UIManager {
     resetAudioState() {
         // Stop playback
         this.stop();
-        
+
         // Disconnect audio source
         if (this.audioSource) {
             try {
@@ -686,25 +687,25 @@ class UIManager {
             }
             this.audioSource = null;
         }
-        
+
         // Clear audio element
         if (this.audioElement.src) {
             this.audioElement.pause();
             this.audioElement.removeAttribute('src');
             this.audioElement.load();
         }
-        
+
         // Clean up blob URL
         if (this.currentBlobUrl) {
             URL.revokeObjectURL(this.currentBlobUrl);
             this.currentBlobUrl = null;
         }
-        
+
         // Reset state
         this.isPlaying = false;
         this.audioFile = null;
         this.updatePlayButton();
-        
+
         console.log('Audio state completely reset');
     }
 
@@ -839,8 +840,8 @@ class UIManager {
     exportProject() {
         // Show export options dialog
         this.showExportDialog();
-    } 
-    
+    }
+
     showExportDialog() {
         // Get default export dimensions from video area if visible, otherwise canvas
         let defaultWidth = 1920;
@@ -851,155 +852,379 @@ class UIManager {
             defaultHeight = window.app.canvas.videoArea.height;
         }
 
+        // Get audio duration for full-length export
+        let audioDuration = 10; // default 10 seconds
+        if (window.app && window.app.audio && window.app.audio.audioElement) {
+            const audioInfo = window.app.audio.getAudioInfo();
+            if (audioInfo && audioInfo.duration && !isNaN(audioInfo.duration)) {
+                audioDuration = Math.ceil(audioInfo.duration);
+            }
+        }
+
         const dialog = document.createElement('div');
         dialog.className = 'export-dialog';
         dialog.innerHTML = `
-            <div class="export-content">
-                <h3>Export ${window.app.canvas.videoArea.visible ? 'Video Area' : 'Canvas'}</h3>
-                <div class="export-options">
-                    <div class="export-option">
-                        <label>
-                            <input type="radio" name="exportType" value="image" checked>
-                            Export as Image (PNG)
-                        </label>
-                    </div>
-                    <div class="export-option">
-                        <label>
-                            <input type="radio" name="exportType" value="video">
-                            Export as Video (WebM)
-                        </label>
-                    </div>
-                    <div class="export-option">
-                        <label>
-                            <input type="radio" name="exportType" value="gif">
-                            Export as GIF
-                        </label>
-                    </div>
+        <div class="export-content">
+            <h3>Export ${window.app.canvas && window.app.canvas.videoArea.visible ? 'Video Area' : 'Canvas'}</h3>
+            <div class="export-options">
+                <div class="export-option">
+                    <label>
+                        <input type="radio" name="exportType" value="image" checked>
+                        Export as Image (PNG)
+                    </label>
                 </div>
-                <div class="export-settings">
-                    <div class="setting">
-                        <label>Width:</label>
-                        <input type="number" id="exportWidth" value="${defaultWidth}" min="400">
-                    </div>
-                    <div class="setting">
-                        <label>Height:</label>
-                        <input type="number" id="exportHeight" value="${defaultHeight}" min="300">
-                    </div>
-                    <div class="setting">
-                        <label>Quality:</label>
-                        <select id="exportQuality">
-                            <option value="0.8">High</option>
-                            <option value="0.6">Medium</option>
-                            <option value="0.4">Low</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="export-actions">
-                    <button class="btn" onclick="this.closeExportDialog()">Cancel</button>
-                    <button class="btn" onclick="this.startExport()">Export</button>
+                <div class="export-option">
+                    <label>
+                        <input type="radio" name="exportType" value="webm">
+                        Export as WebM Video ${window.app.audio && window.app.audio.audioElement ? '(with Audio)' : '(Video Only)'}
+                    </label>
                 </div>
             </div>
-        `;
+            <div class="export-settings">
+                <div class="setting">
+                    <label>Width:</label>
+                    <input type="number" id="exportWidth" value="${defaultWidth}" min="400">
+                </div>
+                <div class="setting">
+                    <label>Height:</label>
+                    <input type="number" id="exportHeight" value="${defaultHeight}" min="300">
+                </div>
+                <div class="setting">
+                    <label>Quality:</label>
+                    <select id="exportQuality">
+                        <option value="0.9">High</option>
+                        <option value="0.7">Medium</option>
+                        <option value="0.5">Low</option>
+                    </select>
+                </div>
+                <div class="setting" id="recordingSettings" style="display: none;">
+                    <label>Duration:</label>
+                    <select id="recordingDuration">
+                        <option value="5">5 seconds</option>
+                        <option value="10">10 seconds</option>
+                        <option value="30">30 seconds</option>
+                        <option value="60">1 minute</option>
+                        <option value="${audioDuration}" ${audioDuration > 60 ? 'selected' : ''}>Full Audio (${Math.floor(audioDuration / 60)}:${String(audioDuration % 60).padStart(2, '0')})</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div class="setting" id="customDurationSetting" style="display: none;">
+                    <label>Custom Duration (seconds):</label>
+                    <input type="number" id="customDuration" value="10" min="1" max="600">
+                </div>
+                <div class="setting" id="fpsSettings" style="display: none;">
+                    <label>Frame Rate:</label>
+                    <select id="recordingFPS">
+                        <option value="24">24 FPS (Cinematic)</option>
+                        <option value="30" selected>30 FPS (Standard)</option>
+                        <option value="60">60 FPS (Smooth)</option>
+                    </select>
+                </div>
+                <div class="setting" id="bitrateSettings" style="display: none;">
+                    <label>Video Quality:</label>
+                    <select id="recordingBitrate">
+                        <option value="2500">2.5 Mbps (Good)</option>
+                        <option value="5000" selected>5 Mbps (High)</option>
+                        <option value="8000">8 Mbps (Very High)</option>
+                        <option value="12000">12 Mbps (Ultra)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="export-info" id="exportInfo" style="display: none;">
+                <p><i class="fas fa-info-circle"></i> Recording will capture visualizations without viewport elements. Audio will be included if available.</p>
+            </div>
+            <div class="export-actions">
+                <button class="btn" id="cancelExport">Cancel</button>
+                <button class="btn" id="startExport">Export</button>
+            </div>
+        </div>
+    `;
 
-        // Add styles for dialog
+        // Add styles for the info section
         const style = document.createElement('style');
+        style.id = 'exportDialogStyles';
         style.textContent = `
-            .export-dialog {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10000;
-            }
-            .export-content {
-                background: #2d2d2d;
-                padding: 24px;
-                border-radius: 8px;
-                min-width: 400px;
-                color: white;
-            }
-            .export-options {
-                margin: 16px 0;
-            }
-            .export-option {
-                margin: 8px 0;
-            }
-            .export-settings {
-                margin: 16px 0;
-            }
-            .setting {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin: 8px 0;
-            }
-            .setting label {
-                width: 80px;
-            }
-            .setting input, .setting select {
-                flex: 1;
-                padding: 4px 8px;
-                background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 4px;
-                color: white;
-            }
-            .export-actions {
-                margin-top: 24px;
-                display: flex;
-                gap: 12px;
-                justify-content: flex-end;
-            }
-        `;
+        .export-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .export-content {
+            background: #2d2d2d;
+            padding: 24px;
+            border-radius: 8px;
+            min-width: 400px;
+            max-width: 500px;
+            color: white;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .export-options {
+            margin: 16px 0;
+        }
+        .export-option {
+            margin: 8px 0;
+        }
+        .export-option label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .export-settings {
+            margin: 16px 0;
+        }
+        .setting {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+        }
+        .setting label {
+            width: 140px;
+            font-size: 14px;
+        }
+        .setting input, .setting select {
+            flex: 1;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: white;
+        }
+        .export-info {
+            margin: 16px 0;
+            padding: 12px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .export-info i {
+            color: #00d4ff;
+            margin-right: 8px;
+        }
+        .export-actions {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+    `;
 
         document.head.appendChild(style);
         document.body.appendChild(dialog);
 
-        // Bind dialog methods
-        window.closeExportDialog = () => {
-            document.body.removeChild(dialog);
-            document.head.removeChild(style);
+        // Show/hide recording settings based on export type
+        const exportTypeRadios = dialog.querySelectorAll('input[name="exportType"]');
+        const recordingSettings = dialog.querySelector('#recordingSettings');
+        const fpsSettings = dialog.querySelector('#fpsSettings');
+        const bitrateSettings = dialog.querySelector('#bitrateSettings');
+        const customDurationSetting = dialog.querySelector('#customDurationSetting');
+        const exportInfo = dialog.querySelector('#exportInfo');
+
+        exportTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'webm') {
+                    recordingSettings.style.display = 'flex';
+                    fpsSettings.style.display = 'flex';
+                    bitrateSettings.style.display = 'flex';
+                    exportInfo.style.display = 'block';
+                } else {
+                    recordingSettings.style.display = 'none';
+                    fpsSettings.style.display = 'none';
+                    bitrateSettings.style.display = 'none';
+                    customDurationSetting.style.display = 'none';
+                    exportInfo.style.display = 'none';
+                }
+            });
+        });
+
+        // Handle duration selection
+        const durationSelect = dialog.querySelector('#recordingDuration');
+        durationSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                customDurationSetting.style.display = 'flex';
+            } else {
+                customDurationSetting.style.display = 'none';
+            }
+        });
+
+        // Define close function
+        const closeDialog = () => {
+            if (dialog.parentNode) {
+                document.body.removeChild(dialog);
+            }
+            if (document.getElementById('exportDialogStyles')) {
+                document.head.removeChild(document.getElementById('exportDialogStyles'));
+            }
         };
 
-        window.startExport = () => {
-            const exportType = document.querySelector('input[name="exportType"]:checked').value;
-            const width = parseInt(document.getElementById('exportWidth').value);
-            const height = parseInt(document.getElementById('exportHeight').value);
-            const quality = parseFloat(document.getElementById('exportQuality').value);
+        // Define export function
+        const startExport = () => {
+            const exportType = dialog.querySelector('input[name="exportType"]:checked').value;
+            const width = parseInt(dialog.querySelector('#exportWidth').value);
+            const height = parseInt(dialog.querySelector('#exportHeight').value);
+            const quality = parseFloat(dialog.querySelector('#exportQuality').value);
 
-            this.performExport(exportType, width, height, quality);
-            window.closeExportDialog();
+            if (exportType === 'webm') {
+                // WebM video export using background canvas recording
+                let duration;
+                const durationValue = dialog.querySelector('#recordingDuration').value;
+
+                if (durationValue === 'custom') {
+                    duration = parseInt(dialog.querySelector('#customDuration').value) * 1000;
+                } else {
+                    duration = parseInt(durationValue) * 1000;
+                }
+
+                const fps = parseInt(dialog.querySelector('#recordingFPS').value);
+                const bitrate = parseInt(dialog.querySelector('#recordingBitrate').value) * 1000;
+
+                if (window.app && window.app.canvas) {
+                    // Update recording canvas size
+                    if (window.app.canvas.recordingCanvas) {
+                        window.app.canvas.recordingCanvas.width = width;
+                        window.app.canvas.recordingCanvas.height = height;
+                    }
+
+                    // Check if we have audio loaded for full-length export
+                    if (durationValue == audioDuration && window.app.audio && window.app.audio.audioElement) {
+                        // Start audio playback from the beginning for full-length recording
+                        window.app.audio.audioElement.currentTime = 0;
+                        window.app.audio.play();
+                    }
+
+                    window.app.canvas.startRecording({ duration, fps, bitrate });
+
+                    // Show notification with duration info
+                    const durationText = duration > 60000 ?
+                        `${Math.floor(duration / 60000)}:${String(Math.floor((duration % 60000) / 1000)).padStart(2, '0')}` :
+                        `${duration / 1000}s`;
+
+                    window.app.showNotification(
+                        'Recording Started',
+                        `Recording ${durationText} at ${fps} FPS (${width}×${height})`,
+                        'info',
+                        3000
+                    );
+                }
+            } else {
+                // Image export
+                this.performImageExport(width, height, quality);
+            }
+
+            closeDialog();
         };
+
+        // Bind event handlers
+        const cancelBtn = dialog.querySelector('#cancelExport');
+        const exportBtn = dialog.querySelector('#startExport');
+
+        cancelBtn.addEventListener('click', closeDialog);
+        exportBtn.addEventListener('click', startExport);
+
+        // Close on escape key
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeDialog();
+                document.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Close on background click
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) {
+                closeDialog();
+            }
+        });
     }
 
-    performExport(type, width, height, quality) {
+    // Add this new method for image export
+    performImageExport(width, height, quality) {
         if (!window.app || !window.app.canvas) return;
 
         try {
             const canvas = window.app.canvas.canvas;
 
-            switch (type) {
-                case 'image':
-                    this.exportImage(canvas, width, height, quality);
-                    break;
-                case 'video':
-                    this.exportVideo(canvas, width, height, quality);
-                    break;
-                case 'gif':
-                    this.exportGIF(canvas, width, height, quality);
-                    break;
+            // Create a temporary canvas for export
+            const exportCanvas = document.createElement('canvas');
+            const exportCtx = exportCanvas.getContext('2d');
+
+            // Set export dimensions
+            exportCanvas.width = width;
+            exportCanvas.height = height;
+
+            // Calculate scale to fit current canvas content
+            const scaleX = width / canvas.width;
+            const scaleY = height / canvas.height;
+            const scale = Math.min(scaleX, scaleY);
+
+            // Center the content
+            const offsetX = (width - canvas.width * scale) / 2;
+            const offsetY = (height - canvas.height * scale) / 2;
+
+            // Fill background
+            exportCtx.fillStyle = '#000000';
+            exportCtx.fillRect(0, 0, width, height);
+
+            // Draw scaled canvas content
+            exportCtx.drawImage(
+                canvas,
+                offsetX, offsetY,
+                canvas.width * scale, canvas.height * scale
+            );
+
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `vithum-export-${timestamp}.png`;
+
+            // Create download link
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = exportCanvas.toDataURL('image/png', quality);
+            link.click();
+
+            // Show success notification
+            if (window.app) {
+                window.app.showNotification(
+                    'Image Exported',
+                    `Canvas exported as ${filename}`,
+                    'success',
+                    3000
+                );
             }
+
         } catch (error) {
-            console.error('Export failed:', error);
-            alert('Export failed. Please try again.');
+            console.error('Failed to export image:', error);
+
+            if (window.app) {
+                window.app.showNotification(
+                    'Export Failed',
+                    'Failed to export canvas as image',
+                    'error',
+                    3000
+                );
+            }
         }
-    } 
-    
+    }
+
+    // Remove the old performExport method if it exists, and replace with this simpler version
+    performExport(type, width, height, quality) {
+        // This method can be kept for backwards compatibility
+        if (type === 'image') {
+            this.performImageExport(width, height, quality);
+        }
+    }
+
     exportImage(canvas, width, height, quality) {
         // Create a temporary canvas with desired dimensions
         const tempCanvas = document.createElement('canvas');
@@ -1203,7 +1428,7 @@ class UIManager {
     init() {
         console.log('UI Manager initialized');
         // Additional initialization can be added here
-        
+
         this.populateVisualizerLibrary();
         this.bindKeyboardShortcuts();
     }

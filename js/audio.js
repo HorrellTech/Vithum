@@ -107,50 +107,66 @@ class AudioManager {
     };
     
     async connectAudioSource() {
-        if (!this.audioContext || !this.analyser) {
-            await this.setupAudio();
+        if (!this.audioContext || !this.audioElement.src) {
+            console.warn('Audio context or element not ready');
+            return;
         }
-        
+
         try {
-            // Only create new source if we don't have one already
-            if (!this.audioSource) {
-                // Create new source from audio element
-                this.audioSource = this.audioContext.createMediaElementSource(this.audioElement);
-                
-                // Connect: source -> analyser -> destination
-                this.audioSource.connect(this.analyser);
-                this.analyser.connect(this.audioContext.destination);
-                
-                console.log('Audio source connected successfully');
+            // Disconnect existing source if it exists
+            if (this.audioSource) {
+                this.audioSource.disconnect();
+                this.audioSource = null;
             }
+
+            // Create new source
+            this.audioSource = this.audioContext.createMediaElementSource(this.audioElement);
+            this.audioSource.connect(this.analyser);
+            this.analyser.connect(this.audioContext.destination);
             
+            console.log('Audio source connected successfully');
         } catch (error) {
             console.error('Failed to connect audio source:', error);
             
-            // If the audio element is already connected, we need to reset it completely
-            if (error.name === 'InvalidStateError' && error.message.includes('already connected')) {
-                console.log('Audio element already connected, resetting...');
-                this.resetAudioState();
-                // Don't retry here - let the next play attempt handle reconnection
-                return;
+            // If we get a constraint error, it might mean the element is already connected
+            if (error.name === 'InvalidStateError') {
+                console.log('Audio element may already be connected, continuing...');
+            } else {
+                throw error;
             }
-            throw error;
         }
     }
     
     loadAudioFile(file) {
         if (!file) return;
         
-        // Stop current playback if playing
+        // Stop current playback and disconnect audio source
         if (this.isPlaying) {
             this.stop();
             console.log('Stopped current playback for new audio file');
+        }
+        
+        // Disconnect and clean up current audio source
+        if (this.audioSource) {
+            try {
+                this.audioSource.disconnect();
+                this.audioSource = null;
+                console.log('Disconnected previous audio source');
+            } catch (error) {
+                console.warn('Error disconnecting audio source:', error);
+            }
         }
         
         // Complete audio reset before loading new file
         this.resetAudioState();
         
         this.audioFile = file;
+        
+        // Clean up previous blob URL
+        if (this.currentBlobUrl) {
+            URL.revokeObjectURL(this.currentBlobUrl);
+            this.currentBlobUrl = null;
+        }
         
         const url = URL.createObjectURL(file);
         this.audioElement.src = url;
@@ -172,7 +188,7 @@ class AudioManager {
                 );
             }
         }, { once: true });
-        
+
         this.audioElement.addEventListener('error', (e) => {
             console.error('Audio loading error:', e);
             if (this.currentBlobUrl) {

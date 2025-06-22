@@ -1810,6 +1810,54 @@ class FractalTreeVisualizer extends BaseVisualizer {
         this.branchRatio = 0.7;
         this.windEffect = 0;
         this.growthPhase = 0;
+        
+        // Additional properties for the properties panel
+        this.trunkLength = 0.3; // Percentage of height
+        this.windStrength = 1;
+        this.growthSpeed = 0.5;
+        this.colorVariation = true;
+        this.leafMode = false;
+    }
+
+    // Override getProperties to include fractal tree properties
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            fractalTree: {
+                maxDepth: this.maxDepth,
+                branchAngle: this.branchAngle,
+                branchRatio: this.branchRatio,
+                trunkLength: this.trunkLength,
+                windStrength: this.windStrength,
+                growthSpeed: this.growthSpeed,
+                colorVariation: this.colorVariation,
+                leafMode: this.leafMode
+            }
+        };
+    }
+
+    // Override updateProperty to handle fractal tree properties
+    updateProperty(category, property, value) {
+        if (category === 'fractalTree') {
+            if (property === 'maxDepth') {
+                this.maxDepth = Math.max(3, Math.min(10, parseInt(value)));
+            } else if (property === 'branchAngle') {
+                this.branchAngle = Math.max(10, Math.min(60, parseFloat(value)));
+            } else if (property === 'branchRatio') {
+                this.branchRatio = Math.max(0.5, Math.min(0.9, parseFloat(value)));
+            } else if (property === 'trunkLength') {
+                this.trunkLength = Math.max(0.1, Math.min(0.5, parseFloat(value)));
+            } else if (property === 'windStrength') {
+                this.windStrength = Math.max(0, Math.min(3, parseFloat(value)));
+            } else if (property === 'growthSpeed') {
+                this.growthSpeed = Math.max(0.1, Math.min(2, parseFloat(value)));
+            } else if (property === 'colorVariation' || property === 'leafMode') {
+                this[property] = value;
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
     }
 
     render(ctx) {
@@ -1823,15 +1871,15 @@ class FractalTreeVisualizer extends BaseVisualizer {
         ctx.scale(this.scaleX, this.scaleY);
         ctx.globalAlpha = this.opacity;
 
-        this.windEffect += this.animationSpeed;
-        this.growthPhase += this.animationSpeed * 0.5;
+        this.windEffect += this.animationSpeed * this.windStrength;
+        this.growthPhase += this.animationSpeed * this.growthSpeed;
 
         let audioGrowth = 1;
         if (this.frequencyData && this.reactToAudio) {
             audioGrowth = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity * 0.5;
         }
 
-        const trunkLength = this.height * 0.3 * audioGrowth;
+        const trunkLength = this.height * this.trunkLength * audioGrowth;
         
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 8;
@@ -1846,7 +1894,7 @@ class FractalTreeVisualizer extends BaseVisualizer {
     drawBranch(ctx, x, y, angle, length, depth, audioGrowth) {
         if (depth === 0 || length < 2) return;
 
-        const windSway = Math.sin(this.windEffect * 0.02 + depth) * (8 - depth) * 2;
+        const windSway = Math.sin(this.windEffect * 0.02 + depth) * (8 - depth) * 2 * this.windStrength;
         const actualAngle = angle + windSway;
         
         const endX = x + Math.cos(Utils.toRadians(actualAngle)) * length;
@@ -1865,14 +1913,45 @@ class FractalTreeVisualizer extends BaseVisualizer {
         ctx.globalAlpha = this.opacity * (0.5 + depth * 0.1);
         
         // Color variation by depth
-        const hue = (depth * 30 + this.windEffect) % 360;
-        ctx.strokeStyle = `hsl(${hue}, 60%, 50%)`;
+        if (this.colorVariation) {
+            const hue = (depth * 30 + this.windEffect) % 360;
+            ctx.strokeStyle = `hsl(${hue}, 60%, 50%)`;
+        } else {
+            ctx.strokeStyle = this.color;
+        }
         
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(actualEndX, actualEndY);
         ctx.stroke();
         ctx.restore();
+
+        // Draw leaves at the end branches - Fixed condition
+        if (this.leafMode && depth <= 3 && growthFactor > 0.5) {
+            ctx.save();
+            ctx.fillStyle = '#90EE90'; // Light green for leaves
+            ctx.globalAlpha = this.opacity * 0.8 * growthFactor; // Make leaves fade in with growth
+            
+            // Draw multiple small leaves around the branch end
+            const leafCount = Math.floor(2 + Math.random() * 3); // 2-4 leaves per branch end
+            for (let i = 0; i < leafCount; i++) {
+                const leafAngle = actualAngle + (Math.random() - 0.5) * 60; // Random angle around branch
+                const leafDistance = 5 + Math.random() * 10; // Distance from branch end
+                const leafX = actualEndX + Math.cos(Utils.toRadians(leafAngle)) * leafDistance;
+                const leafY = actualEndY + Math.sin(Utils.toRadians(leafAngle)) * leafDistance;
+                
+                // Draw leaf as small ellipse
+                ctx.beginPath();
+                ctx.save();
+                ctx.translate(leafX, leafY);
+                ctx.rotate(Utils.toRadians(leafAngle));
+                ctx.scale(1, 0.6); // Make leaves oval-shaped
+                ctx.arc(0, 0, 3 + Math.random() * 2, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.restore();
+        }
 
         if (growthFactor >= 1) {
             // Draw child branches
@@ -1882,6 +1961,276 @@ class FractalTreeVisualizer extends BaseVisualizer {
             
             this.drawBranch(ctx, endX, endY, leftAngle, newLength, depth - 1, audioGrowth);
             this.drawBranch(ctx, endX, endY, rightAngle, newLength, depth - 1, audioGrowth);
+        }
+    }
+
+    // Override serialize to include new properties
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            maxDepth: this.maxDepth,
+            branchAngle: this.branchAngle,
+            branchRatio: this.branchRatio,
+            trunkLength: this.trunkLength,
+            windStrength: this.windStrength,
+            growthSpeed: this.growthSpeed,
+            colorVariation: this.colorVariation,
+            leafMode: this.leafMode
+        };
+    }
+}
+
+class ReactiveImageVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        
+        // Image properties
+        this.imageData = null;
+        this.imageSrc = null;
+        this.imageElement = null;
+        this.imageLoaded = false;
+        
+        // Shape properties
+        this.shape = 'rectangle'; // rectangle, circle, square
+        this.maskMode = true;
+        
+        // Reactive properties
+        this.baseScale = 1;
+        this.reactiveScaleStrength = 0.5;
+        this.scaleSmoothing = 0.8;
+        this.currentAudioScale = 1;
+        
+        // Flash properties
+        this.flashEnabled = false;
+        this.flashColor = '#ffffff';
+        this.flashIntensity = 0.5;
+        this.flashSpeed = 1;
+        this.flashThreshold = 0.7; // Audio threshold to trigger flash
+        this.currentFlash = 0;
+        this.flashSmoothing = 0.9;
+        
+        // Audio analysis
+        this.audioAverage = 0;
+        this.audioPeak = 0;
+        this.smoothedAverage = 0;
+        this.smoothedPeak = 0;
+    }
+
+    // Load image from file
+    async loadImage(file) {
+        return new Promise((resolve, reject) => {
+            if (!file || !file.type.startsWith('image/')) {
+                reject(new Error('Invalid image file'));
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.imageSrc = e.target.result;
+                this.imageData = e.target.result; // Store for serialization
+                
+                this.imageElement = new Image();
+                this.imageElement.onload = () => {
+                    this.imageLoaded = true;
+                    resolve();
+                };
+                this.imageElement.onerror = () => {
+                    reject(new Error('Failed to load image'));
+                };
+                this.imageElement.src = this.imageSrc;
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Load image from base64 data (for deserialization)
+    loadImageFromData(imageData) {
+        return new Promise((resolve, reject) => {
+            if (!imageData) {
+                reject(new Error('No image data provided'));
+                return;
+            }
+
+            this.imageSrc = imageData;
+            this.imageData = imageData;
+            
+            this.imageElement = new Image();
+            this.imageElement.onload = () => {
+                this.imageLoaded = true;
+                resolve();
+            };
+            this.imageElement.onerror = () => {
+                reject(new Error('Failed to load image from data'));
+            };
+            this.imageElement.src = this.imageSrc;
+        });
+    }
+
+    updateAudioData(audioData, frequencyData) {
+        super.updateAudioData(audioData, frequencyData);
+        
+        if (this.audioData && this.reactToAudio) {
+            // Calculate audio metrics
+            this.audioAverage = Utils.average(this.audioData) / 255;
+            this.audioPeak = Math.max(...this.audioData) / 255;
+            
+            // Smooth the values
+            this.smoothedAverage = this.smoothedAverage * this.scaleSmoothing + this.audioAverage * (1 - this.scaleSmoothing);
+            this.smoothedPeak = this.smoothedPeak * this.scaleSmoothing + this.audioPeak * (1 - this.scaleSmoothing);
+            
+            // Update reactive scale
+            this.currentAudioScale = 1 + this.smoothedAverage * this.reactiveScaleStrength * this.sensitivity;
+            
+            // Update flash effect
+            if (this.flashEnabled) {
+                const flashTrigger = this.smoothedPeak > this.flashThreshold ? 1 : 0;
+                this.currentFlash = this.currentFlash * this.flashSmoothing + flashTrigger * (1 - this.flashSmoothing);
+            } else {
+                this.currentFlash = 0;
+            }
+        }
+    }
+
+    render(ctx) {
+        if (!this.visible || !this.imageLoaded || !this.imageElement) return;
+
+        ctx.save();
+
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        
+        // Apply base scale and reactive scale
+        const totalScaleX = this.scaleX * this.currentAudioScale;
+        const totalScaleY = this.scaleY * this.currentAudioScale;
+        ctx.scale(totalScaleX, totalScaleY);
+        ctx.globalAlpha = this.opacity;
+
+        const bounds = { x: -this.width / 2, y: -this.height / 2, width: this.width, height: this.height };
+
+        // Create clipping mask based on shape
+        if (this.maskMode && this.shape !== 'rectangle') {
+            this.createShapeMask(ctx, bounds);
+        }
+
+        // Draw the image
+        ctx.drawImage(this.imageElement, bounds.x, bounds.y, bounds.width, bounds.height);
+
+        // Apply flash effect
+        if (this.flashEnabled && this.currentFlash > 0.01) {
+            ctx.globalCompositeOperation = 'overlay';
+            ctx.fillStyle = this.flashColor;
+            ctx.globalAlpha = this.opacity * this.currentFlash * this.flashIntensity;
+            
+            if (this.shape === 'circle' && this.maskMode) {
+                ctx.beginPath();
+                ctx.arc(0, 0, Math.min(bounds.width, bounds.height) / 2, 0, 2 * Math.PI);
+                ctx.fill();
+            } else if (this.shape === 'square' && this.maskMode) {
+                const size = Math.min(bounds.width, bounds.height);
+                ctx.fillRect(-size / 2, -size / 2, size, size);
+            } else {
+                ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+            }
+        }
+
+        ctx.restore();
+    }
+
+    createShapeMask(ctx, bounds) {
+        ctx.beginPath();
+        
+        switch (this.shape) {
+            case 'circle':
+                const radius = Math.min(bounds.width, bounds.height) / 2;
+                ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+                break;
+                
+            case 'square':
+                const size = Math.min(bounds.width, bounds.height);
+                ctx.rect(-size / 2, -size / 2, size, size);
+                break;
+                
+            default: // rectangle
+                ctx.rect(bounds.x, bounds.y, bounds.width, bounds.height);
+                break;
+        }
+        
+        ctx.clip();
+    }
+
+    // Override getProperties to include image-specific properties
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            image: {
+                shape: this.shape,
+                maskMode: this.maskMode,
+                reactiveScaleStrength: this.reactiveScaleStrength,
+                scaleSmoothing: this.scaleSmoothing,
+                flashEnabled: this.flashEnabled,
+                flashColor: this.flashColor,
+                flashIntensity: this.flashIntensity,
+                flashSpeed: this.flashSpeed,
+                flashThreshold: this.flashThreshold
+            }
+        };
+    }
+
+    // Override updateProperty to handle image properties
+    updateProperty(category, property, value) {
+        if (category === 'image') {
+            if (property === 'shape' || property === 'flashColor') {
+                this[property] = value;
+            } else if (property === 'maskMode' || property === 'flashEnabled') {
+                this[property] = value;
+            } else if (property === 'reactiveScaleStrength') {
+                this.reactiveScaleStrength = Math.max(0, Math.min(2, parseFloat(value)));
+            } else if (property === 'scaleSmoothing' || property === 'flashIntensity' || property === 'flashThreshold') {
+                this[property] = Math.max(0, Math.min(1, parseFloat(value)));
+            } else if (property === 'flashSpeed') {
+                this.flashSpeed = Math.max(0.1, Math.min(5, parseFloat(value)));
+                this.flashSmoothing = 1 - (this.flashSpeed / 5);
+            } else {
+                this[property] = parseFloat(value);
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    // Override serialize to include image data
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            imageData: this.imageData, // Include base64 image data
+            shape: this.shape,
+            maskMode: this.maskMode,
+            reactiveScaleStrength: this.reactiveScaleStrength,
+            scaleSmoothing: this.scaleSmoothing,
+            flashEnabled: this.flashEnabled,
+            flashColor: this.flashColor,
+            flashIntensity: this.flashIntensity,
+            flashSpeed: this.flashSpeed,
+            flashThreshold: this.flashThreshold
+        };
+    }
+
+    // Override deserialize to restore image
+    async deserialize(data) {
+        Object.assign(this, data);
+        
+        // Restore image if data exists
+        if (data.imageData) {
+            try {
+                await this.loadImageFromData(data.imageData);
+            } catch (error) {
+                console.error('Failed to restore image:', error);
+            }
         }
     }
 }
@@ -1926,6 +2275,8 @@ class VisualizerFactory {
                 return new TunnelVisualizer(x, y, width, height);
             case 'fractaltree':
                 return new FractalTreeVisualizer(x, y, width, height);
+            case 'reactiveimage':
+                return new ReactiveImageVisualizer(x, y, width, height);
             default:
                 throw new Error(`Unknown visualizer type: ${type}`);
         }
