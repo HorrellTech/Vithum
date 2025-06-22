@@ -502,3 +502,21 @@
     color: #00d4ff;
     font-weight: 500;
 }
+
+.center-controls {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.center-controls .btn-small {
+    flex: 1;
+    min-width: 80px;
+    font-size: 11px;
+    padding: 6px 8px;
+}
+
+.center-controls .btn-small i {
+    margin-right: 4px;
+}

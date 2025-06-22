@@ -589,7 +589,7 @@ body {
     }
 }
 
-/* Responsive Design */
+/* Responsive Design 
 @media (max-width: 1200px) {
     .left-panel, .right-panel {
         width: 250px;
@@ -614,7 +614,7 @@ body {
     .left-panel, .right-panel {
         width: 200px;
     }
-}
+}*/
 
 /* Add after existing panel styles */
 

@@ -101,7 +101,7 @@ class CanvasManager {
 
     bindExportControls() {
         // WebM Recording controls
-        const recordBtn = document.getElementById('startRecording');
+        /*const recordBtn = document.getElementById('startRecording');
         const stopRecordBtn = document.getElementById('stopRecording');
         const exportImageBtn = document.getElementById('exportImage');
 
@@ -123,7 +123,7 @@ class CanvasManager {
 
         if (stopRecordBtn) {
             stopRecordBtn.addEventListener('click', () => {
-                console.log('Stop recording button clicked');
+                //console.log('Stop recording button clicked');
                 this.stopRecording();
             });
         }
@@ -132,6 +132,31 @@ class CanvasManager {
             exportImageBtn.addEventListener('click', () => {
                 const format = document.getElementById('imageFormat')?.value || 'png';
                 this.exportAsImage(format);
+            });
+        }*/
+        // WebM Recording controls - commented out for now
+        const recordBtn = document.getElementById('startRecording');
+        const stopRecordBtn = document.getElementById('stopRecording');
+        const exportImageBtn = document.getElementById('exportImage');
+
+        if (recordBtn) {
+            recordBtn.addEventListener('click', () => {
+                // Show export guide modal instead of recording
+                this.showExportGuideModal();
+            });
+        }
+
+        if (stopRecordBtn) {
+            stopRecordBtn.addEventListener('click', () => {
+                // Show export guide modal instead of stopping
+                this.showExportGuideModal();
+            });
+        }
+
+        if (exportImageBtn) {
+            exportImageBtn.addEventListener('click', () => {
+                // Show export guide modal instead of image export
+                this.showExportGuideModal();
             });
         }
     }
@@ -189,13 +214,13 @@ class CanvasManager {
         const mousePos = this.getMousePos(e);
         this.lastMousePos = mousePos;
 
-        console.log('Mouse down at:', mousePos);
+        //console.log('Mouse down at:', mousePos);
 
         // Check for resize handles first (highest priority)
         if (this.selectedVisualizer) {
             const handle = this.getResizeHandle(mousePos);
             if (handle) {
-                console.log('Resize handle clicked:', handle);
+                //console.log('Resize handle clicked:', handle);
                 this.isResizing = true;
                 this.resizeHandle = handle;
                 this.canvas.style.cursor = handle + '-resize';
@@ -204,7 +229,7 @@ class CanvasManager {
 
             // Check for rotation handle
             if (this.isRotationHandle(mousePos)) {
-                console.log('Rotation handle clicked');
+                //console.log('Rotation handle clicked');
                 this.isRotating = true;
                 this.canvas.style.cursor = 'grabbing';
                 return;
@@ -215,7 +240,7 @@ class CanvasManager {
         const clickedVisualizer = this.handleVisualizerSelection(mousePos);
 
         if (clickedVisualizer) {
-            console.log('Visualizer selected:', clickedVisualizer.constructor.name);
+            //console.log('Visualizer selected:', clickedVisualizer.constructor.name);
             this.isDragging = true;
             const bounds = clickedVisualizer.getBounds();
             this.dragOffset = {
@@ -247,7 +272,7 @@ class CanvasManager {
             }
         }
 
-        console.log('Canvas clicked, no visualizer');
+        //console.log('Canvas clicked, no visualizer');
         // Start canvas panning if nothing else was clicked (LOWEST PRIORITY)
         this.isPanning = true;
         this.canvas.style.cursor = 'grab';
@@ -568,7 +593,7 @@ class CanvasManager {
             this.visualizers.splice(index, 1);
             // Add to end (front)
             this.visualizers.push(visualizer);
-            console.log(`Brought ${visualizer.constructor.name} to front`);
+            //console.log(`Brought ${visualizer.constructor.name} to front`);
         }
     }
 
@@ -580,7 +605,7 @@ class CanvasManager {
             this.visualizers.splice(index, 1);
             // Add to beginning (back)
             this.visualizers.unshift(visualizer);
-            console.log(`Sent ${visualizer.constructor.name} to back`);
+            //console.log(`Sent ${visualizer.constructor.name} to back`);
         }
     }
 
@@ -614,7 +639,7 @@ class CanvasManager {
         if (isSamePosition && isRapidClick && visualizersAtPoint.length > 1) {
             // Cycle to next visualizer
             this.currentSelectionIndex = (this.currentSelectionIndex + 1) % visualizersAtPoint.length;
-            console.log(`Cycling selection: ${this.currentSelectionIndex + 1}/${visualizersAtPoint.length}`);
+            //console.log(`Cycling selection: ${this.currentSelectionIndex + 1}/${visualizersAtPoint.length}`);
 
             // Show cycling indicator
             this.showCyclingIndicator(visualizersAtPoint);
@@ -624,7 +649,7 @@ class CanvasManager {
             this.lastClickedVisualizers = visualizersAtPoint;
 
             if (visualizersAtPoint.length > 1) {
-                console.log(`Multiple visualizers found: ${visualizersAtPoint.length}`);
+                //console.log(`Multiple visualizers found: ${visualizersAtPoint.length}`);
                 this.showCyclingIndicator(visualizersAtPoint);
             }
         }
@@ -743,13 +768,13 @@ class CanvasManager {
         const mousePos = this.getMousePos(e);
         this.lastMousePos = mousePos;
 
-        console.log('Mouse down at:', mousePos);
+        //console.log('Mouse down at:', mousePos);
 
         // Check for resize handles first (highest priority)
         if (this.selectedVisualizer) {
             const handle = this.getResizeHandle(mousePos);
             if (handle) {
-                console.log('Resize handle clicked:', handle);
+                //console.log('Resize handle clicked:', handle);
                 this.isResizing = true;
                 this.resizeHandle = handle;
                 this.canvas.style.cursor = handle + '-resize';
@@ -758,7 +783,7 @@ class CanvasManager {
 
             // Check for rotation handle
             if (this.isRotationHandle(mousePos)) {
-                console.log('Rotation handle clicked');
+                //console.log('Rotation handle clicked');
                 this.isRotating = true;
                 this.canvas.style.cursor = 'grabbing';
                 return;
@@ -769,7 +794,7 @@ class CanvasManager {
         const clickedVisualizer = this.handleVisualizerSelection(mousePos);
 
         if (clickedVisualizer) {
-            console.log('Visualizer selected:', clickedVisualizer.constructor.name);
+            //console.log('Visualizer selected:', clickedVisualizer.constructor.name);
             this.isDragging = true;
             const bounds = clickedVisualizer.getBounds();
             this.dragOffset = {
@@ -802,7 +827,7 @@ class CanvasManager {
             }
         }
 
-        console.log('Canvas clicked, no visualizer');
+        //console.log('Canvas clicked, no visualizer');
         // Start canvas panning if nothing else was clicked (LOWEST PRIORITY)
         this.isPanning = true;
         this.canvas.style.cursor = 'grab';
@@ -975,7 +1000,7 @@ class CanvasManager {
             visualizer.setSelected(true);
             this.updatePropertiesPanel(visualizer);
             this.hideDropZone();
-            console.log('Selected visualizer:', visualizer.constructor.name, 'ID:', visualizer.id);
+            //console.log('Selected visualizer:', visualizer.constructor.name, 'ID:', visualizer.id);
         } else {
             this.showNoSelection();
             if (this.visualizers.length === 0) {
@@ -993,7 +1018,7 @@ class CanvasManager {
             this.hideDropZone();
             return visualizer;
         } catch (error) {
-            console.error('Failed to create visualizer:', error);
+            //console.error('Failed to create visualizer:', error);
         }
     }
 
@@ -1031,14 +1056,14 @@ class CanvasManager {
             { name: 'e', x: bounds.x + bounds.width - handleSize / 2, y: bounds.y + bounds.height / 2 - handleSize / 2 }
         ];
 
-        console.log('Checking resize handles for mouse at:', mousePos);
-        console.log('Visualizer bounds:', bounds);
-        console.log('Handle positions:', handles);
+        //console.log('Checking resize handles for mouse at:', mousePos);
+        //console.log('Visualizer bounds:', bounds);
+        //console.log('Handle positions:', handles);
 
         for (const handle of handles) {
             const isInHandle = Utils.pointInRect(mousePos.x, mousePos.y, handle.x, handle.y, handleSize, handleSize);
             if (isInHandle) {
-                console.log('Found handle:', handle.name);
+                //console.log('Found handle:', handle.name);
                 return handle.name;
             }
         }
@@ -1057,15 +1082,15 @@ class CanvasManager {
     } handleResize(mousePos) {
         if (!this.selectedVisualizer || !this.resizeHandle) return;
 
-        console.log('Handling resize with handle:', this.resizeHandle);
-        console.log('Mouse position:', mousePos);
-        console.log('Last mouse position:', this.lastMousePos);
+        //console.log('Handling resize with handle:', this.resizeHandle);
+        //console.log('Mouse position:', mousePos);
+        //console.log('Last mouse position:', this.lastMousePos);
 
         const bounds = this.selectedVisualizer.getBounds();
         const dx = mousePos.x - this.lastMousePos.x;
         const dy = mousePos.y - this.lastMousePos.y;
 
-        console.log('Delta:', { dx, dy });
+        //console.log('Delta:', { dx, dy });
 
         let newWidth = bounds.width;
         let newHeight = bounds.height;
@@ -1109,7 +1134,7 @@ class CanvasManager {
                 break;
         }
 
-        console.log('New dimensions:', { newX, newY, newWidth, newHeight });
+        //console.log('New dimensions:', { newX, newY, newWidth, newHeight });
 
         this.selectedVisualizer.x = newX;
         this.selectedVisualizer.y = newY;
@@ -1288,6 +1313,19 @@ class CanvasManager {
                 <label class="property-label">Y</label>
                 <input type="number" class="property-input" value="${Math.round(properties.position.y)}" 
                        data-category="position" data-property="y">
+            </div>
+            <div class="property-item">
+                <div class="center-controls">
+                    <button class="btn-small" id="centerX">
+                        <i class="fas fa-arrows-alt-h"></i> Center X
+                    </button>
+                    <button class="btn-small" id="centerY">
+                        <i class="fas fa-arrows-alt-v"></i> Center Y
+                    </button>
+                    <button class="btn-small" id="centerBoth">
+                        <i class="fas fa-crosshairs"></i> Center Both
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -1643,9 +1681,9 @@ class CanvasManager {
                         if (file && visualizer instanceof ReactiveImageVisualizer) {
                             try {
                                 await visualizer.loadImage(file);
-                                console.log('Image loaded successfully');
+                                //console.log('Image loaded successfully');
                             } catch (error) {
-                                console.error('Failed to load image:', error);
+                                //console.error('Failed to load image:', error);
                                 alert('Failed to load image. Please try again.');
                             }
                         }
@@ -1660,6 +1698,11 @@ class CanvasManager {
         const toggleVisibilityBtn = document.getElementById('toggleVisibility');
         const toggleSelectableBtn = document.getElementById('toggleSelectable');
         const unlockBtn = document.getElementById('unlockVisualizer');
+
+        // NEW: Bind center buttons
+        const centerXBtn = document.getElementById('centerX');
+        const centerYBtn = document.getElementById('centerY');
+        const centerBothBtn = document.getElementById('centerBoth');
 
         if (bringToFrontBtn) {
             bringToFrontBtn.addEventListener('click', () => {
@@ -1691,8 +1734,74 @@ class CanvasManager {
             });
         }
 
+        // NEW: Center button event listeners
+        if (centerXBtn) {
+            centerXBtn.addEventListener('click', () => {
+                this.centerVisualizerX(visualizer);
+            });
+        }
+
+        if (centerYBtn) {
+            centerYBtn.addEventListener('click', () => {
+                this.centerVisualizerY(visualizer);
+            });
+        }
+
+        if (centerBothBtn) {
+            centerBothBtn.addEventListener('click', () => {
+                this.centerVisualizerBoth(visualizer);
+            });
+        }
+
         // Bind property change events
         this.bindPropertyEvents(visualizer);
+    }
+
+    centerVisualizerX(visualizer) {
+        const centerX = this.canvas.width / 2;
+        visualizer.x = centerX - (visualizer.width / 2);
+        this.updatePropertiesPanel(visualizer);
+
+        if (window.app) {
+            window.app.showNotification(
+                'Centered Horizontally',
+                `${visualizer.constructor.name} centered on X axis`,
+                'success',
+                1500
+            );
+        }
+    }
+
+    centerVisualizerY(visualizer) {
+        const centerY = this.canvas.height / 2;
+        visualizer.y = centerY - (visualizer.height / 2);
+        this.updatePropertiesPanel(visualizer);
+
+        if (window.app) {
+            window.app.showNotification(
+                'Centered Vertically',
+                `${visualizer.constructor.name} centered on Y axis`,
+                'success',
+                1500
+            );
+        }
+    }
+
+    centerVisualizerBoth(visualizer) {
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        visualizer.x = centerX - (visualizer.width / 2);
+        visualizer.y = centerY - (visualizer.height / 2);
+        this.updatePropertiesPanel(visualizer);
+
+        if (window.app) {
+            window.app.showNotification(
+                'Centered',
+                `${visualizer.constructor.name} centered in viewport`,
+                'success',
+                1500
+            );
+        }
     }
 
     unlockVisualizer(visualizer) {
@@ -1811,7 +1920,7 @@ class CanvasManager {
                 this.recordingCanvas.height = this.canvas.height;
             }
 
-            console.log(`Created recording canvas: ${this.recordingCanvas.width}x${this.recordingCanvas.height}`);
+            //console.log(`Created recording canvas: ${this.recordingCanvas.width}x${this.recordingCanvas.height}`);
 
             // Render initial frame
             this.renderToRecordingCanvas();
@@ -1821,7 +1930,6 @@ class CanvasManager {
 
     renderToRecordingCanvas() {
         if (!this.recordingCanvas || !this.recordingCtx) {
-            console.warn('Recording canvas not available');
             return;
         }
 
@@ -1861,138 +1969,81 @@ class CanvasManager {
 
         this.recordingCtx.restore();
 
-        // Add a subtle frame indicator to ensure each frame is unique
-        if (this.isRecording) {
-            this.recordingCtx.save();
-            this.recordingCtx.globalAlpha = 0.001;
-            this.recordingCtx.fillStyle = `hsl(${Date.now() % 360}, 50%, 50%)`;
-            this.recordingCtx.fillRect(0, 0, 1, 1);
-            this.recordingCtx.restore();
-        }
+        // Remove the frame uniqueness operations - they're unnecessary and add overhead
     }
 
     async startRecording(options = {}) {
         if (this.isRecording) {
-            console.warn('Recording already in progress');
             return;
         }
 
         try {
-            // Update UI buttons
-            const recordBtn = document.getElementById('startRecording');
-            const stopRecordBtn = document.getElementById('stopRecording');
-
-            if (recordBtn) {
-                recordBtn.textContent = 'Stop Recording';
-                recordBtn.classList.add('recording');
-            }
-
-            if (stopRecordBtn) {
-                stopRecordBtn.disabled = false;
-            }
-
-            // Default recording options
-            const recordingOptions = {
+            // Store recording options for use in the loop
+            this.recordingOptions = {
                 duration: options.duration || 10000,
                 fps: options.fps || 30,
                 videoBitsPerSecond: options.bitrate || 2500000
             };
 
-            console.log('Starting recording with options:', recordingOptions);
-
             // Create and setup recording canvas
             this.createRecordingCanvas();
 
-            // Start audio playback if not already playing and we have audio
-            if (window.app && window.app.audio) {
-                if (!window.app.audio.isPlaying) {
-                    console.log('Starting audio playback for recording...');
-                    try {
-                        await window.app.audio.play();
-                        // Give audio a moment to stabilize
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    } catch (audioError) {
-                        console.warn('Could not start audio playback:', audioError);
-                    }
+            // Start audio playback if needed
+            if (window.app && window.app.audio && !window.app.audio.isPlaying) {
+                try {
+                    await window.app.audio.play();
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (audioError) {
+                    console.warn('Could not start audio playback:', audioError);
                 }
             }
 
-            // IMPROVED: Start recording loop FIRST to ensure canvas is actively updating
-            this.isRecording = true; // Set this early so renderToRecordingCanvas works
-            this.startRecordingLoop();
+            // Set recording state early
+            this.isRecording = true;
+            this.lastRecordingFrame = 0;
 
-            // Render multiple initial frames with delays to ensure canvas stream is active
-            for (let i = 0; i < 10; i++) {
+            this.setRecordingMode(true);
+
+            // Render a few initial frames to warm up the canvas
+            for (let i = 0; i < 3; i++) {
                 this.renderToRecordingCanvas();
-                await new Promise(resolve => setTimeout(resolve, 33)); // ~30fps
+                await new Promise(resolve => setTimeout(resolve, 16)); // ~60fps warm-up
             }
 
-            // Get video stream from recording canvas with explicit frame rate
-            const videoStream = this.recordingCanvas.captureStream(recordingOptions.fps);
-            console.log('Video stream created:', videoStream);
-            console.log('Video tracks:', videoStream.getVideoTracks());
+            // Get video stream with consistent frame rate
+            const videoStream = this.recordingCanvas.captureStream(this.recordingOptions.fps);
 
-            // Ensure video stream is active
-            const videoTrack = videoStream.getVideoTracks()[0];
-            if (videoTrack) {
-                console.log('Video track state:', videoTrack.readyState);
-                console.log('Video track settings:', videoTrack.getSettings());
-            }
-
-            // Get audio stream if available
+            // Audio setup (existing code)
             let audioStream = null;
             if (window.app && window.app.audio && window.app.audio.audioContext) {
                 try {
-                    // Create audio destination for recording
                     this.audioDestination = window.app.audio.audioContext.createMediaStreamDestination();
-
-                    // Connect the audio source to the destination
                     if (window.app.audio.audioSource) {
                         window.app.audio.audioSource.connect(this.audioDestination);
-                        console.log('Audio source connected to recording destination');
                     } else if (window.app.audio.analyser) {
-                        // Fallback: connect analyser to destination
                         window.app.audio.analyser.connect(this.audioDestination);
-                        console.log('Audio analyser connected to recording destination');
                     }
-
                     audioStream = this.audioDestination.stream;
-                    console.log('Audio stream created:', audioStream);
-                    console.log('Audio tracks:', audioStream.getAudioTracks());
                 } catch (audioError) {
                     console.warn('Failed to capture audio stream:', audioError);
                 }
             }
 
-            // Combine video and audio streams
+            // Combine streams
             let combinedStream;
             if (audioStream && audioStream.getAudioTracks().length > 0) {
                 combinedStream = new MediaStream([
                     ...videoStream.getVideoTracks(),
                     ...audioStream.getAudioTracks()
                 ]);
-                console.log('Recording with audio - combined tracks:', combinedStream.getTracks().length);
             } else {
                 combinedStream = videoStream;
-                console.log('Recording video only - tracks:', combinedStream.getTracks().length);
             }
 
-            // Check if we have any tracks
-            if (combinedStream.getTracks().length === 0) {
-                throw new Error('No video or audio tracks available for recording');
-            }
-
-            // Verify tracks are active
-            combinedStream.getTracks().forEach((track, index) => {
-                console.log(`Track ${index}: ${track.kind}, state: ${track.readyState}, enabled: ${track.enabled}`);
-            });
-
-            // Create media recorder with better codec selection
+            // Better codec selection for performance
             let mimeType;
             const codecs = [
-                'video/webm;codecs=vp8,opus',
-                'video/webm;codecs=vp8',
-                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8', // VP8 is more widely supported and often faster
                 'video/webm;codecs=vp9',
                 'video/webm',
                 'video/mp4'
@@ -2009,89 +2060,73 @@ class CanvasManager {
                 throw new Error('No supported video codec found');
             }
 
-            console.log('Using mime type:', mimeType);
-
             this.mediaRecorder = new MediaRecorder(combinedStream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: recordingOptions.videoBitsPerSecond,
+                videoBitsPerSecond: this.recordingOptions.videoBitsPerSecond,
                 audioBitsPerSecond: audioStream ? 128000 : undefined
             });
 
-            // Reset chunks array and frame counter
+            // Reset chunks and frame counter
             this.recordedChunks = [];
             this.recordingFrameCount = 0;
 
-            // IMPROVED: Handle data available with better error checking
+            // Event handlers
             this.mediaRecorder.ondataavailable = (event) => {
-                console.log('Data available:', event.data.size, 'bytes', 'type:', event.data.type);
                 if (event.data && event.data.size > 0) {
                     this.recordedChunks.push(event.data);
-                    console.log(`Chunk ${this.recordedChunks.length} added, total chunks: ${this.recordedChunks.length}`);
-                } else {
-                    console.warn('Received empty or invalid data chunk:', event.data);
                 }
             };
 
-            // Handle recording stop
             this.mediaRecorder.onstop = () => {
-                console.log('MediaRecorder stopped, chunks:', this.recordedChunks.length);
-                // Add small delay to ensure all data is processed
                 setTimeout(() => {
                     this.handleRecordingComplete();
                     this.cleanupRecording();
                 }, 100);
             };
 
-            // Handle errors
             this.mediaRecorder.onerror = (event) => {
                 console.error('MediaRecorder error:', event.error);
                 this.cleanupRecording();
             };
 
-            // Handle recording start
-            this.mediaRecorder.onstart = () => {
-                console.log('MediaRecorder started successfully');
-            };
-
-            // IMPROVED: Start recording with smaller timeslice for more frequent data capture
-            const timeslice = 100; // Capture data every 100ms
-            console.log('Starting MediaRecorder with timeslice:', timeslice);
+            // Start recording with larger timeslice to reduce overhead
+            const timeslice = 1000; // Capture data every 1 second instead of 100ms
             this.mediaRecorder.start(timeslice);
 
-            console.log('MediaRecorder started with state:', this.mediaRecorder.state);
-
-            // Set recording duration and auto-stop
+            // Set up auto-stop
             this.recordingStartTime = Date.now();
-            this.recordingDuration = recordingOptions.duration;
+            this.recordingDuration = this.recordingOptions.duration;
 
             this.recordingTimeout = setTimeout(() => {
                 if (this.isRecording) {
-                    console.log('Auto-stopping recording after duration');
                     this.stopRecording();
                 }
-            }, recordingOptions.duration);
+            }, this.recordingOptions.duration);
+
+            // Start the optimized recording loop
+            this.startRecordingLoop();
 
             // Show recording indicator
             this.showRecordingIndicator();
 
-            console.log(`Started recording: ${recordingOptions.duration / 1000}s at ${recordingOptions.fps} FPS`);
+            // Update UI
+            const recordBtn = document.getElementById('startRecording');
+            const stopRecordBtn = document.getElementById('stopRecording');
 
-            // IMPROVED: Multiple data requests to ensure capture
-            const requestInitialData = () => {
-                if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-                    this.mediaRecorder.requestData();
-                    console.log('Requested data capture');
-                }
-            };
+            if (recordBtn) {
+                recordBtn.textContent = 'Stop Recording';
+                recordBtn.classList.add('recording');
+            }
 
-            // Request data multiple times initially
-            setTimeout(requestInitialData, 100);
-            setTimeout(requestInitialData, 500);
-            setTimeout(requestInitialData, 1000);
+            if (stopRecordBtn) {
+                stopRecordBtn.disabled = false;
+            }
+
+            console.log(`Started recording: ${this.recordingOptions.duration / 1000}s at ${this.recordingOptions.fps} FPS`);
 
         } catch (error) {
             console.error('Failed to start recording:', error);
-            this.isRecording = false; // Reset recording state
+            this.isRecording = false;
             this.cleanupRecording();
 
             if (window.app) {
@@ -2108,48 +2143,42 @@ class CanvasManager {
     startRecordingLoop() {
         if (!this.isRecording) return;
 
-        // Render frame to recording canvas
-        this.renderToRecordingCanvas();
+        // Only render at the target frame rate instead of every animation frame
+        const targetFPS = this.recordingOptions?.fps || 30;
+        const frameInterval = 1000 / targetFPS;
+        const now = performance.now();
 
-        // IMPROVED: More robust frame updating
-        const ctx = this.recordingCtx;
-        if (ctx) {
-            // Add a tiny, nearly invisible timestamp to ensure frames are different
-            ctx.save();
-            ctx.globalAlpha = 0.001;
-            ctx.fillStyle = `hsl(${Date.now() % 360}, 50%, 50%)`;
-            ctx.fillRect(Date.now() % this.recordingCanvas.width, 0, 1, 1);
-            ctx.restore();
+        if (!this.lastRecordingFrame || now - this.lastRecordingFrame >= frameInterval) {
+            // Render frame to recording canvas
+            this.renderToRecordingCanvas();
 
             // Increment frame counter
             this.recordingFrameCount = (this.recordingFrameCount || 0) + 1;
 
-            // IMPROVED: More frequent data requests
-            if (this.recordingFrameCount % 30 === 0) { // Every 30 frames instead of 60
-                console.log(`Recording frame ${this.recordingFrameCount}`);
+            this.lastRecordingFrame = now;
 
-                // Request data more frequently to ensure capture
+            // Less frequent data requests to reduce overhead
+            if (this.recordingFrameCount % 150 === 0) { // Every 5 seconds at 30fps
                 if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
                     this.mediaRecorder.requestData();
-                    console.log('Requested periodic data capture');
                 }
             }
         }
 
-        // Continue loop at consistent intervals
-        this.recordingAnimationId = requestAnimationFrame(() => {
+        // Use setTimeout for more consistent timing instead of requestAnimationFrame
+        this.recordingAnimationId = setTimeout(() => {
             this.startRecordingLoop();
-        });
+        }, frameInterval);
     }
 
     stopRecording() {
         if (!this.isRecording || !this.mediaRecorder) {
-            console.log('Stop recording called but not recording or no recorder');
+            //console.log('Stop recording called but not recording or no recorder');
             return;
         }
 
         try {
-            console.log('Stopping recording manually...');
+            //console.log('Stopping recording manually...');
 
             // Clear timeout if it exists
             if (this.recordingTimeout) {
@@ -2161,12 +2190,12 @@ class CanvasManager {
             if (this.mediaRecorder.state === 'recording') {
                 // Request final data multiple times
                 this.mediaRecorder.requestData();
-                console.log('Requested final data before stopping');
+                //console.log('Requested final data before stopping');
 
                 // Give more time for final data capture
                 setTimeout(() => {
                     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-                        console.log('Final chunks before stop:', this.recordedChunks.length);
+                        //console.log('Final chunks before stop:', this.recordedChunks.length);
                         this.mediaRecorder.stop();
                     }
                 }, 200); // Increased delay
@@ -2183,6 +2212,7 @@ class CanvasManager {
             }
 
             this.isRecording = false;
+            this.setRecordingMode(false);
             this.hideRecordingIndicator();
 
             // Stop recording loop after a delay to capture final frames
@@ -2193,22 +2223,22 @@ class CanvasManager {
                 }
             }, 300);
 
-            console.log('Recording stopped manually, waiting for data...');
+            //console.log('Recording stopped manually, waiting for data...');
         } catch (error) {
-            console.error('Error stopping recording:', error);
+            //console.error('Error stopping recording:', error);
             this.cleanupRecording();
         }
     }
 
     handleRecordingComplete() {
-        console.log('Handling recording completion, chunks:', this.recordedChunks.length);
+        //console.log('Handling recording completion, chunks:', this.recordedChunks.length);
 
         // IMPROVED: Better error handling and debugging
         if (this.recordedChunks.length === 0) {
-            console.error('No recorded data available');
-            console.log('MediaRecorder final state:', this.mediaRecorder?.state);
-            console.log('Recording frame count:', this.recordingFrameCount);
-            console.log('Recording duration:', Date.now() - this.recordingStartTime, 'ms');
+            //console.error('No recorded data available');
+            //console.log('MediaRecorder final state:', this.mediaRecorder?.state);
+            //console.log('Recording frame count:', this.recordingFrameCount);
+            //console.log('Recording duration:', Date.now() - this.recordingStartTime, 'ms');
 
             if (window.app) {
                 window.app.showNotification(
@@ -2224,7 +2254,7 @@ class CanvasManager {
         try {
             // Calculate total size
             const totalSize = this.recordedChunks.reduce((total, chunk) => total + chunk.size, 0);
-            console.log(`Processing ${this.recordedChunks.length} chunks, total size: ${totalSize} bytes`);
+            //console.log(`Processing ${this.recordedChunks.length} chunks, total size: ${totalSize} bytes`);
 
             if (totalSize === 0) {
                 throw new Error('All recorded chunks are empty');
@@ -2236,11 +2266,11 @@ class CanvasManager {
                 mimeType = this.mediaRecorder.mimeType;
             }
 
-            console.log('Creating blob with mime type:', mimeType);
+            //console.log('Creating blob with mime type:', mimeType);
 
             // Create blob from recorded chunks
             const blob = new Blob(this.recordedChunks, { type: mimeType });
-            console.log('Blob created, size:', blob.size);
+            //console.log('Blob created, size:', blob.size);
 
             if (blob.size === 0) {
                 throw new Error('Created blob is empty');
@@ -2283,10 +2313,10 @@ class CanvasManager {
                 );
             }
 
-            console.log(`Recording saved: ${filename} (${blob.size} bytes, ${this.recordingFrameCount} frames)`);
+            //console.log(`Recording saved: ${filename} (${blob.size} bytes, ${this.recordingFrameCount} frames)`);
 
         } catch (error) {
-            console.error('Error processing recording:', error);
+            //console.error('Error processing recording:', error);
 
             if (window.app) {
                 window.app.showNotification(
@@ -2297,6 +2327,77 @@ class CanvasManager {
                 );
             }
         }
+    }
+
+    cleanupRecording() {
+        // Reset recording state
+        this.isRecording = false;
+
+        // Stop recording loop (now using setTimeout instead of requestAnimationFrame)
+        if (this.recordingAnimationId) {
+            clearTimeout(this.recordingAnimationId);
+            this.recordingAnimationId = null;
+        }
+
+        // Clear auto-stop timeout
+        if (this.recordingTimeout) {
+            clearTimeout(this.recordingTimeout);
+            this.recordingTimeout = null;
+        }
+
+        // Clean up media recorder
+        if (this.mediaRecorder) {
+            if (this.mediaRecorder.state !== 'inactive') {
+                try {
+                    this.mediaRecorder.stop();
+                } catch (error) {
+                    console.warn('Error stopping media recorder:', error);
+                }
+            }
+            this.mediaRecorder = null;
+        }
+
+        // Clean up audio destination
+        if (this.audioDestination) {
+            try {
+                this.audioDestination.disconnect();
+            } catch (error) {
+                console.warn('Error disconnecting audio destination:', error);
+            }
+            this.audioDestination = null;
+        }
+
+        // Update UI buttons
+        const recordBtn = document.getElementById('startRecording');
+        const stopRecordBtn = document.getElementById('stopRecording');
+
+        if (recordBtn) {
+            recordBtn.textContent = 'Start Recording';
+            recordBtn.classList.remove('recording');
+        }
+
+        if (stopRecordBtn) {
+            stopRecordBtn.disabled = true;
+        }
+
+        // Hide recording indicator
+        this.hideRecordingIndicator();
+
+        // Reset frame tracking
+        this.lastRecordingFrame = 0;
+        this.recordingOptions = null;
+    }
+
+    setRecordingMode(enabled) {
+        this.visualizers.forEach(visualizer => {
+            if (visualizer.setRecordingMode) {
+                visualizer.setRecordingMode(enabled);
+            }
+            // Disable frame skipping during recording for smooth output
+            if (enabled && visualizer.skipFrames !== undefined) {
+                visualizer.skipFrames = 0;
+            }
+        });
     }
 
     showRecordingIndicator() {
@@ -2358,26 +2459,44 @@ class CanvasManager {
         indicator.appendChild(dot);
         indicator.appendChild(text);
 
+        // IMPROVED: Store reference to this canvas manager for event handlers
+        const canvasManager = this;
+
         // Add hover effect
-        indicator.addEventListener('mouseenter', () => {
+        indicator.addEventListener('mouseenter', (e) => {
+            e.stopPropagation();
             indicator.style.background = 'rgba(255, 0, 0, 1)';
             text.textContent = 'STOP';
         });
 
-        indicator.addEventListener('mouseleave', () => {
+        indicator.addEventListener('mouseleave', (e) => {
+            e.stopPropagation();
             indicator.style.background = 'rgba(255, 0, 0, 0.9)';
-            const elapsed = Date.now() - this.recordingStartTime;
-            const remaining = Math.max(0, this.recordingDuration - elapsed);
+            const elapsed = Date.now() - canvasManager.recordingStartTime;
+            const remaining = Math.max(0, canvasManager.recordingDuration - elapsed);
             const seconds = Math.ceil(remaining / 1000);
             text.textContent = `REC ${seconds}s`;
         });
 
-        // Add click handler to stop recording
+        // IMPROVED: Add click handler to stop recording with better event handling
         indicator.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Recording indicator clicked - stopping recording');
-            this.stopRecording();
+            e.stopImmediatePropagation();
+            //console.log('Recording indicator clicked - stopping recording');
+
+            // Call stop recording directly on this instance
+            canvasManager.stopRecording();
+        });
+
+        // IMPROVED: Also add touch support for mobile
+        indicator.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            //console.log('Recording indicator touched - stopping recording');
+
+            canvasManager.stopRecording();
         });
 
         document.body.appendChild(indicator);
@@ -2434,7 +2553,7 @@ class CanvasManager {
                 );
             }
         } catch (error) {
-            console.error('Failed to export image:', error);
+            //console.error('Failed to export image:', error);
 
             if (window.app) {
                 window.app.showNotification(
@@ -2640,7 +2759,7 @@ class CanvasManager {
             // Video area label
             this.ctx.fillStyle = '#ff6b35';
             this.ctx.font = '14px Inter, sans-serif';
-            this.ctx.fillText(`Video Area (${bounds.width}×${bounds.height})`, bounds.x + 10, bounds.y + 20);
+            this.ctx.fillText(`Video Area (${bounds.width}×${bounds.height})`, bounds.x, bounds.y - 20);
 
             // Resize handles for visible video area
             const handleSize = 8;
@@ -2674,7 +2793,7 @@ class CanvasManager {
             // Optional: Very faint label
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             this.ctx.font = '12px Inter, sans-serif';
-            this.ctx.fillText(`Video Area (${bounds.width}×${bounds.height})`, bounds.x + 10, bounds.y + 20);
+            this.ctx.fillText(`Video Area (${bounds.width}×${bounds.height})`, bounds.x, bounds.y - 20);
         }
     }
 
@@ -2716,20 +2835,648 @@ class CanvasManager {
 
                         this.visualizers.push(visualizer);
                     } catch (error) {
-                        console.error('Failed to create visualizer:', error);
+                        //console.error('Failed to create visualizer:', error);
                     }
                 }
             }
 
-            console.log(`Loaded ${this.visualizers.length} visualizers`);
+            //console.log(`Loaded ${this.visualizers.length} visualizers`);
 
             if (this.visualizers.length === 0) {
                 this.showDropZone();
             }
 
         } catch (error) {
-            console.error('Failed to deserialize canvas data:', error);
+            //console.error('Failed to deserialize canvas data:', error);
         }
+    }
+
+    showExportGuideModal() {
+        // Remove existing modal if present
+        const existingModal = document.getElementById('exportGuideModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Create modal overlay
+        const modal = document.createElement('div');
+        modal.id = 'exportGuideModal';
+        modal.className = 'export-guide-modal';
+
+        modal.innerHTML = `
+        <div class="export-guide-content">
+            <div class="export-guide-header">
+                <h2><i class="fas fa-video"></i> How to Record Your Visualizations</h2>
+                <button class="close-btn" id="closeExportGuide">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="export-guide-body">
+                <div class="guide-section">
+                    <h3><i class="fas fa-desktop"></i> Step 1: Screen Recording</h3>
+                    <p>Use a free screen recording tool to capture your visualizations in real-time:</p>
+                    
+                    <div class="tools-grid">
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-broadcast-tower"></i>
+                                <h4>OBS Studio</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Windows</span>
+                                    <span class="tag">Mac</span>
+                                    <span class="tag">Linux</span>
+                                </span>
+                            </div>
+                            <p>Professional-grade, free and open source. Best for high-quality recordings.</p>
+                            <a href="https://obsproject.com/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download OBS Studio
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-video"></i>
+                                <h4>Loom</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Web</span>
+                                    <span class="tag">Windows</span>
+                                    <span class="tag">Mac</span>
+                                </span>
+                            </div>
+                            <p>Simple browser-based recording. Great for quick captures.</p>
+                            <a href="https://www.loom.com/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Try Loom
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-camera"></i>
+                                <h4>ShareX</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Windows</span>
+                                </span>
+                            </div>
+                            <p>Lightweight and feature-rich. Perfect for Windows users.</p>
+                            <a href="https://getsharex.com/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download ShareX
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-apple-alt"></i>
+                                <h4>QuickTime Player</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Mac</span>
+                                </span>
+                            </div>
+                            <p>Built into macOS. Simple screen recording functionality.</p>
+                            <div class="tool-note">Pre-installed on Mac</div>
+                        </div>
+
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-mobile-alt"></i>
+                                <h4>iOS Screen Recording</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">iOS</span>
+                                </span>
+                            </div>
+                            <p>Built-in screen recording in Control Center. Perfect for iPhone/iPad recordings.</p>
+                            <div class="tool-note">Settings > Control Center > Screen Recording</div>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-android"></i>
+                                <h4>Android Screen Record</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Android</span>
+                                </span>
+                            </div>
+                            <p>Built into Android 11+. Quick Settings tile for easy screen recording.</p>
+                            <div class="tool-note">Pull down Quick Settings > Screen Record</div>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-play-circle"></i>
+                                <h4>AZ Screen Recorder</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Android</span>
+                                    <span class="tag">iOS</span>
+                                </span>
+                            </div>
+                            <p>Popular mobile screen recorder with no watermarks and HD recording.</p>
+                            <a href="https://play.google.com/store/apps/details?id=com.hecorat.screenrecorder.free" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Android App
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-record-vinyl"></i>
+                                <h4>DU Recorder</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Android</span>
+                                    <span class="tag">iOS</span>
+                                </span>
+                            </div>
+                            <p>Free screen recorder with live streaming capabilities and video editing tools.</p>
+                            <a href="https://play.google.com/store/apps/details?id=com.duapps.recorder" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download DU Recorder
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-video"></i>
+                                <h4>Screen Recorder +</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">iOS</span>
+                                </span>
+                            </div>
+                            <p>Feature-rich iOS screen recorder with editing capabilities and multiple export formats.</p>
+                            <a href="https://apps.apple.com/app/screen-recorder/id1060886789" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> iOS App Store
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="guide-section">
+                    <h3><i class="fas fa-cut"></i> Step 2: Video Editing & Cropping</h3>
+                    <p>Edit and crop your recordings to focus on the visualization area:</p>
+                    
+                    <div class="tools-grid">
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-film"></i>
+                                <h4>Clipchamp</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Web</span>
+                                    <span class="tag">Windows</span>
+                                </span>
+                            </div>
+                            <p>Free web-based editor with easy cropping tools. Now part of Microsoft.</p>
+                            <a href="https://clipchamp.com/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Try Clipchamp
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-scissors"></i>
+                                <h4>DaVinci Resolve</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Windows</span>
+                                    <span class="tag">Mac</span>
+                                    <span class="tag">Linux</span>
+                                </span>
+                            </div>
+                            <p>Professional-grade editor with advanced features. Completely free.</p>
+                            <a href="https://www.blackmagicdesign.com/products/davinciresolve/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download DaVinci Resolve
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-video"></i>
+                                <h4>OpenShot</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Windows</span>
+                                    <span class="tag">Mac</span>
+                                    <span class="tag">Linux</span>
+                                </span>
+                            </div>
+                            <p>Simple, open-source editor with basic cropping and trimming.</p>
+                            <a href="https://www.openshot.org/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download OpenShot
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-magic"></i>
+                                <h4>CapCut</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">Web</span>
+                                    <span class="tag">Mobile</span>
+                                </span>
+                            </div>
+                            <p>User-friendly editor with templates and easy cropping tools.</p>
+                            <a href="https://www.capcut.com/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Try CapCut
+                            </a>
+                        </div>
+
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-mobile-alt"></i>
+                                <h4>iMovie</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">iOS</span>
+                                    <span class="tag">Mac</span>
+                                </span>
+                            </div>
+                            <p>Apple's free video editor with intuitive cropping and trimming tools.</p>
+                            <div class="tool-note">Pre-installed on iOS and Mac</div>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-cut"></i>
+                                <h4>InShot</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">iOS</span>
+                                    <span class="tag">Android</span>
+                                </span>
+                            </div>
+                            <p>Popular mobile video editor with precise cropping and aspect ratio tools.</p>
+                            <a href="https://play.google.com/store/apps/details?id=com.camerasideas.instashot" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download InShot
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-edit"></i>
+                                <h4>KineMaster</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">iOS</span>
+                                    <span class="tag">Android</span>
+                                </span>
+                            </div>
+                            <p>Professional mobile video editor with advanced cropping and effects.</p>
+                            <a href="https://www.kinemaster.com/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download KineMaster
+                            </a>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-header">
+                                <i class="fas fa-film"></i>
+                                <h4>VideoShow</h4>
+                                <span class="platform-tags">
+                                    <span class="tag">iOS</span>
+                                    <span class="tag">Android</span>
+                                </span>
+                            </div>
+                            <p>Easy-to-use mobile editor with cropping, trimming, and filter options.</p>
+                            <a href="https://videoshow.en.uptodown.com/" target="_blank" class="tool-link">
+                                <i class="fas fa-external-link-alt"></i> Download VideoShow
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="guide-section">
+                    <h3><i class="fas fa-lightbulb"></i> Pro Tips</h3>
+                    <div class="tips-grid">
+                        <div class="tip-card">
+                            <i class="fas fa-eye"></i>
+                            <h4>Hide UI Elements</h4>
+                            <p>Use the video area outline to know exactly what to crop. Hide the video area before recording for a clean capture.</p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <i class="fas fa-expand-arrows-alt"></i>
+                            <h4>Record Full Screen</h4>
+                            <p>Record the entire browser window, then crop to the visualization area in post-production for best quality.</p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <h4>Frame Rate</h4>
+                            <p>Record at 30fps or 60fps for smooth motion. Higher frame rates capture fast-moving visualizations better.</p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <i class="fas fa-volume-up"></i>
+                            <h4>Audio Sync</h4>
+                            <p>Make sure to capture system audio along with the video for synchronized audio-visual recordings.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="export-guide-footer">
+                <button class="btn btn-primary" id="closeExportGuideBtn">
+                    <i class="fas fa-check"></i> Got it!
+                </button>
+            </div>
+        </div>
+    `;
+
+        // Add styles
+        if (!document.getElementById('exportGuideStyles')) {
+            const styles = document.createElement('style');
+            styles.id = 'exportGuideStyles';
+            styles.textContent = `
+            .export-guide-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+                overflow-y: auto;
+            }
+            
+            .export-guide-content {
+                background: #2d2d2d;
+                border-radius: 12px;
+                max-width: 900px;
+                width: 100%;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            }
+            
+            .export-guide-header {
+                padding: 24px 24px 0 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                margin-bottom: 24px;
+            }
+            
+            .export-guide-header h2 {
+                color: #00d4ff;
+                margin: 0;
+                font-size: 24px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .close-btn {
+                background: none;
+                border: none;
+                color: #999;
+                font-size: 20px;
+                cursor: pointer;
+                padding: 8px;
+                border-radius: 4px;
+                transition: all 0.2s ease;
+            }
+            
+            .close-btn:hover {
+                color: white;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            
+            .export-guide-body {
+                padding: 0 24px;
+                color: white;
+            }
+            
+            .guide-section {
+                margin-bottom: 32px;
+            }
+            
+            .guide-section h3 {
+                color: #00d4ff;
+                font-size: 20px;
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .guide-section p {
+                color: #ccc;
+                line-height: 1.6;
+                margin-bottom: 20px;
+            }
+            
+            .tools-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+            
+            .tool-card {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                padding: 20px;
+                transition: all 0.3s ease;
+            }
+            
+            .tool-card:hover {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: #00d4ff;
+                transform: translateY(-2px);
+            }
+            
+            .tool-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 12px;
+                flex-wrap: wrap;
+            }
+            
+            .tool-header i {
+                color: #00d4ff;
+                font-size: 18px;
+            }
+            
+            .tool-header h4 {
+                color: white;
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+            }
+            
+            .platform-tags {
+                display: flex;
+                gap: 4px;
+                margin-left: auto;
+            }
+            
+            .tag {
+                background: rgba(0, 212, 255, 0.2);
+                color: #00d4ff;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            
+            .tool-card p {
+                color: #ccc;
+                font-size: 14px;
+                line-height: 1.5;
+                margin-bottom: 12px;
+            }
+            
+            .tool-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                color: #00d4ff;
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 500;
+                transition: color 0.2s ease;
+            }
+            
+            .tool-link:hover {
+                color: white;
+            }
+            
+            .tool-note {
+                color: #999;
+                font-size: 12px;
+                font-style: italic;
+            }
+            
+            .tips-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 16px;
+            }
+            
+            .tip-card {
+                background: rgba(0, 212, 255, 0.05);
+                border: 1px solid rgba(0, 212, 255, 0.2);
+                border-radius: 8px;
+                padding: 16px;
+            }
+            
+            .tip-card i {
+                color: #00d4ff;
+                font-size: 20px;
+                margin-bottom: 8px;
+                display: block;
+            }
+            
+            .tip-card h4 {
+                color: white;
+                margin: 0 0 8px 0;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            
+            .tip-card p {
+                color: #ccc;
+                font-size: 13px;
+                line-height: 1.4;
+                margin: 0;
+            }
+            
+            .export-guide-footer {
+                padding: 24px;
+                text-align: center;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            .btn {
+                background: #00d4ff;
+                color: black;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s ease;
+            }
+            
+            .btn:hover {
+                background: #00b8e6;
+                transform: translateY(-1px);
+            }
+            
+            @media (max-width: 768px) {
+                .export-guide-modal {
+                    padding: 10px;
+                }
+                
+                .export-guide-content {
+                    max-height: 95vh;
+                }
+                
+                .export-guide-header {
+                    padding: 16px 16px 0 16px;
+                }
+                
+                .export-guide-body {
+                    padding: 0 16px;
+                }
+                
+                .export-guide-footer {
+                    padding: 16px;
+                }
+                
+                .tools-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .tips-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .tool-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .platform-tags {
+                    margin-left: 0;
+                    margin-top: 8px;
+                }
+            }
+        `;
+            document.head.appendChild(styles);
+        }
+
+        // Add modal to page
+        document.body.appendChild(modal);
+
+        // Bind close events
+        const closeBtn = document.getElementById('closeExportGuide');
+        const closeModalBtn = document.getElementById('closeExportGuideBtn');
+
+        const closeModal = () => {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        closeModalBtn.addEventListener('click', closeModal);
+
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Close on escape key
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
     }
 
     clear() {

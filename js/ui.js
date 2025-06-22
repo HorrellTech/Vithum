@@ -104,10 +104,21 @@ class UIManager {
             saveProjectBtn.addEventListener('click', this.handleSaveProject);
         }
 
+        //const exportProjectBtn = document.getElementById('exportProject');
+        //if (exportProjectBtn) {
+        //    exportProjectBtn.removeEventListener('click', this.handleExportProject);
+        //    exportProjectBtn.addEventListener('click', this.handleExportProject);
+        //}
+
         const exportProjectBtn = document.getElementById('exportProject');
         if (exportProjectBtn) {
             exportProjectBtn.removeEventListener('click', this.handleExportProject);
-            exportProjectBtn.addEventListener('click', this.handleExportProject);
+            // Show export guide modal instead of export dialog
+            exportProjectBtn.addEventListener('click', () => {
+                if (window.app && window.app.canvas) {
+                    window.app.canvas.showExportGuideModal();
+                }
+            });
         }
 
         // Audio control buttons
@@ -839,7 +850,11 @@ class UIManager {
 
     exportProject() {
         // Show export options dialog
-        this.showExportDialog();
+        //this.showExportDialog();
+            // Show export guide modal instead of export dialog
+            if (window.app && window.app.canvas) {
+                window.app.canvas.showExportGuideModal();
+            }
     }
 
     showExportDialog() {
