@@ -798,9 +798,9 @@ class PlasmaVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
         this.timeOffset = 0;
-        this.frequency1 = 0.02;
-        this.frequency2 = 0.03;
-        this.gridSize = 8;
+        this.frequency1 = 0.01;
+        this.frequency2 = 0.02;
+        this.gridSize = 4; // Smaller grid for smoother appearance
         
         // Cache for performance
         this.tempCanvas = null;
@@ -811,10 +811,49 @@ class PlasmaVisualizer extends BaseVisualizer {
         this.data = null;
         
         // Performance optimizations
-        this.maxDimension = 400; // Limit canvas size for performance
-        this.skipFrames = 0; // Skip frames when resizing
-        this.targetFrameRate = 30; // Target 30fps for plasma
+        this.maxDimension = 1080; // Reduced for better performance
+        this.targetFrameRate = 60; // Higher framerate for smooth plasma
         this.lastRenderTime = 0;
+        
+        // Plasma-specific properties
+        this.plasmaComplexity = 12; // Number of plasma layers
+        this.colorCycleSpeed = 2;
+        this.waveAmplitude = 1;
+        this.gradientSmoothing = false;
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            plasma: {
+                frequency1: this.frequency1,
+                frequency2: this.frequency2,
+                gridSize: this.gridSize,
+                plasmaComplexity: this.plasmaComplexity,
+                colorCycleSpeed: this.colorCycleSpeed,
+                waveAmplitude: this.waveAmplitude,
+                gradientSmoothing: this.gradientSmoothing
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'plasma') {
+            if (property === 'gridSize') {
+                this.gridSize = Math.max(2, Math.min(16, parseInt(value)));
+                this.tempCanvas = null; // Force recreation
+            } else if (property === 'plasmaComplexity') {
+                this.plasmaComplexity = Math.max(1, Math.min(6, parseInt(value)));
+            } else if (property === 'gradientSmoothing') {
+                this.gradientSmoothing = value;
+                this.tempCanvas = null; // Force recreation
+            } else {
+                this[property] = parseFloat(value);
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
     }
 
     hexToRgb(hex) {
@@ -840,6 +879,8 @@ class PlasmaVisualizer extends BaseVisualizer {
             this.tempCanvas.width = renderWidth;
             this.tempCanvas.height = renderHeight;
             this.tempCtx = this.tempCanvas.getContext('2d');
+            this.tempCtx.imageSmoothingEnabled = this.gradientSmoothing;
+            this.tempCtx.imageSmoothingQuality = 'high';
             this.imageData = this.tempCtx.createImageData(renderWidth, renderHeight);
             this.data = this.imageData.data;
             this.lastWidth = renderWidth;
@@ -852,17 +893,12 @@ class PlasmaVisualizer extends BaseVisualizer {
     render(ctx) {
         if (!this.visible) return;
 
-        // Frame rate limiting for performance
+        // Frame rate limiting for smooth animation
         const now = performance.now();
         const frameInterval = 1000 / this.targetFrameRate;
         
-        if (this.skipFrames > 0) {
-            this.skipFrames--;
-            this.renderCachedFrame(ctx);
-            return;
-        }
-        
         if (now - this.lastRenderTime < frameInterval) {
+            // Still render the cached frame to prevent flashing
             this.renderCachedFrame(ctx);
             return;
         }
@@ -877,60 +913,96 @@ class PlasmaVisualizer extends BaseVisualizer {
         ctx.scale(this.scaleX, this.scaleY);
         ctx.globalAlpha = this.opacity;
 
-        this.timeOffset += this.animationSpeed;
+        this.timeOffset += this.animationSpeed * 0.02; // Slower, smoother time progression
 
         let audioInfluence = 1;
         if (this.frequencyData && this.reactToAudio) {
             const filteredData = this.getFilteredFrequencyData();
-            audioInfluence = 1 + Utils.average(filteredData) / 255 * this.sensitivity;
+            audioInfluence = 1 + Utils.average(filteredData) / 255 * this.sensitivity * 0.5;
         }
 
         // Create optimized canvas
         const { renderWidth, renderHeight, scale } = this.createTempCanvas(this.width, this.height);
-        
-        // Use larger grid size for better performance
-        const adaptiveGridSize = Math.max(this.gridSize, Math.floor(Math.max(renderWidth, renderHeight) / 50));
 
         // Convert color to RGB once
-        const color = this.hexToRgb(this.color);
+        const baseColor = this.hexToRgb(this.color);
 
-        // Process in chunks to prevent blocking
-        this.processPlasmaChunk(renderWidth, renderHeight, adaptiveGridSize, color, audioInfluence, 0);
+        // Generate plasma in one go (no chunking to prevent flashing)
+        this.generatePlasma(renderWidth, renderHeight, baseColor, audioInfluence);
+
+        // Update the temp canvas
+        this.tempCtx.putImageData(this.imageData, 0, 0);
+
+        // Draw to main canvas
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(this.tempCanvas, -this.width/2, -this.height/2, this.width, this.height);
 
         ctx.restore();
     }
 
-    processPlasmaChunk(renderWidth, renderHeight, gridSize, color, audioInfluence, startY) {
-        const chunkHeight = Math.min(gridSize * 4, renderHeight - startY); // Process in small chunks
-        
-        for (let x = 0; x < renderWidth; x += gridSize) {
-            for (let y = startY; y < startY + chunkHeight && y < renderHeight; y += gridSize) {
-                const normalizedX = (x - renderWidth/2) / renderWidth;
-                const normalizedY = (y - renderHeight/2) / renderHeight;
+    generatePlasma(renderWidth, renderHeight, baseColor, audioInfluence) {
+        const centerX = renderWidth / 2;
+        const centerY = renderHeight / 2;
+        const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
+
+        for (let x = 0; x < renderWidth; x += this.gridSize) {
+            for (let y = 0; y < renderHeight; y += this.gridSize) {
+                // Normalize coordinates
+                const normalizedX = (x - centerX) / renderWidth;
+                const normalizedY = (y - centerY) / renderHeight;
                 
-                const plasma = Math.sin(normalizedX * 10 + this.timeOffset * this.frequency1) +
-                              Math.sin(normalizedY * 10 + this.timeOffset * this.frequency2) +
-                              Math.sin((normalizedX + normalizedY) * 10 + this.timeOffset * 0.025);
+                // Distance from center for radial effects
+                const distance = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
                 
-                const intensity = ((plasma + 3) / 6) * 255 * audioInfluence;
+                // Complex plasma calculation with multiple layers
+                let plasma = 0;
                 
-                const r = Math.floor(color.r * intensity / 255);
-                const g = Math.floor(color.g * intensity / 255);
-                const b = Math.floor(color.b * intensity / 255);
+                // Layer 1: Basic sinusoidal waves
+                plasma += Math.sin(normalizedX * 8 + this.timeOffset * this.frequency1);
+                plasma += Math.sin(normalizedY * 6 + this.timeOffset * this.frequency2);
+                
+                // Layer 2: Circular waves (lava lamp effect)
+                plasma += Math.sin(distance * 12 + this.timeOffset * 0.5);
+                
+                // Layer 3: Interference patterns
+                plasma += Math.sin((normalizedX + normalizedY) * 10 + this.timeOffset * 0.3);
+                
+                if (this.plasmaComplexity > 3) {
+                    // Layer 4: Rotational component
+                    const angle = Math.atan2(normalizedY, normalizedX);
+                    plasma += Math.sin(angle * 4 + this.timeOffset * 0.4) * 0.5;
+                }
+                
+                if (this.plasmaComplexity > 4) {
+                    // Layer 5: Noise-like component
+                    plasma += Math.sin(normalizedX * 15 + Math.sin(normalizedY * 12 + this.timeOffset)) * 0.3;
+                }
+                
+                if (this.plasmaComplexity > 5) {
+                    // Layer 6: High frequency detail
+                    plasma += Math.sin(normalizedX * 20 + this.timeOffset * 0.8) * 0.2;
+                    plasma += Math.sin(normalizedY * 18 + this.timeOffset * 0.6) * 0.2;
+                }
+                
+                // Apply wave amplitude and audio influence
+                plasma *= this.waveAmplitude * audioInfluence;
+                
+                // Normalize plasma value to 0-1 range
+                const intensity = (Math.sin(plasma) + 1) / 2;
+                
+                // Create color cycling effect
+                const hueShift = (this.timeOffset * this.colorCycleSpeed * 10) % 360;
+                const colorPhase = (intensity + hueShift / 360) % 1;
+                
+                // Generate smooth color gradient
+                const r = Math.floor(baseColor.r * (0.3 + 0.7 * Math.sin(colorPhase * Math.PI * 2)));
+                const g = Math.floor(baseColor.g * (0.3 + 0.7 * Math.sin(colorPhase * Math.PI * 2 + Math.PI * 2/3)));
+                const b = Math.floor(baseColor.b * (0.3 + 0.7 * Math.sin(colorPhase * Math.PI * 2 + Math.PI * 4/3)));
                 
                 // Fill grid area efficiently
-                this.fillGridArea(x, y, gridSize, renderWidth, renderHeight, r, g, b);
+                this.fillGridArea(x, y, this.gridSize, renderWidth, renderHeight, r, g, b);
             }
-        }
-
-        // If there's more to process, continue in next frame
-        if (startY + chunkHeight < renderHeight) {
-            requestAnimationFrame(() => {
-                this.processPlasmaChunk(renderWidth, renderHeight, gridSize, color, audioInfluence, startY + chunkHeight);
-            });
-        } else {
-            // Finished processing, update the canvas
-            this.tempCtx.putImageData(this.imageData, 0, 0);
         }
     }
 
@@ -964,11 +1036,9 @@ class PlasmaVisualizer extends BaseVisualizer {
         ctx.restore();
     }
 
-    // Override resize to trigger cache invalidation and frame skipping
+    // Override resize to trigger cache invalidation
     resize(width, height) {
         super.resize(width, height);
-        // Skip several frames during resize to maintain performance
-        this.skipFrames = 5;
         // Clear cache to force recreation
         this.tempCanvas = null;
     }
@@ -979,6 +1049,21 @@ class PlasmaVisualizer extends BaseVisualizer {
         this.tempCtx = null;
         this.imageData = null;
         this.data = null;
+    }
+
+    // Override serialize to include new properties
+    serialize() {
+        const baseData = super.serialize();
+        return {
+            ...baseData,
+            frequency1: this.frequency1,
+            frequency2: this.frequency2,
+            gridSize: this.gridSize,
+            plasmaComplexity: this.plasmaComplexity,
+            colorCycleSpeed: this.colorCycleSpeed,
+            waveAmplitude: this.waveAmplitude,
+            gradientSmoothing: this.gradientSmoothing
+        };
     }
 }
 
