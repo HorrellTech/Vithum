@@ -24,26 +24,38 @@ class UIManager {
         document.documentElement.style.setProperty('--left-panel-width', this.leftPanelWidth + 'px');
         document.documentElement.style.setProperty('--right-panel-width', this.rightPanelWidth + 'px');
 
-        // Apply initial panel widths
-        const leftPanel = document.querySelector('.left-panel');
-        const rightPanel = document.querySelector('.right-panel');
-        const leftHandle = document.querySelector('.resize-left');
-        const rightHandle = document.querySelector('.resize-right');
+         // Force apply the widths to ensure they override any CSS conflicts
+        setTimeout(() => {
+            const leftPanel = document.querySelector('.left-panel');
+            const rightPanel = document.querySelector('.right-panel');
+            const leftHandle = document.querySelector('.resize-left');
+            const rightHandle = document.querySelector('.resize-right');
 
-        if (leftPanel) {
-            leftPanel.style.width = this.leftPanelWidth + 'px';
-        }
+            if (leftPanel) {
+                leftPanel.style.width = this.leftPanelWidth + 'px';
+                leftPanel.style.minWidth = this.leftPanelWidth + 'px';
+                leftPanel.style.maxWidth = this.leftPanelWidth + 'px';
+            }
 
-        if (rightPanel) {
-            rightPanel.style.width = this.rightPanelWidth + 'px';
-        }
+            if (rightPanel) {
+                rightPanel.style.width = this.rightPanelWidth + 'px';
+                rightPanel.style.minWidth = this.rightPanelWidth + 'px';
+                rightPanel.style.maxWidth = this.rightPanelWidth + 'px';
+            }
 
-        if (leftHandle) {
-            leftHandle.style.left = (this.leftPanelWidth - 2) + 'px';
-        }
+            if (leftHandle) {
+                leftHandle.style.left = (this.leftPanelWidth - 2) + 'px';
+            }
 
-        if (rightHandle) {
-            rightHandle.style.right = (this.rightPanelWidth - 2) + 'px';
+            if (rightHandle) {
+                rightHandle.style.right = (this.rightPanelWidth - 2) + 'px';
+            }
+        }, 100);
+    }
+
+    updateVisualizerList() {
+        if (window.app && window.app.canvas) {
+            window.app.canvas.updateVisualizerList();
         }
     }
 
@@ -1477,6 +1489,7 @@ class UIManager {
 
         this.populateVisualizerLibrary();
         this.bindKeyboardShortcuts();
+        this.updateVisualizerList();
     }
 }
 

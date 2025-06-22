@@ -520,3 +520,260 @@
 .center-controls .btn-small i {
     margin-right: 4px;
 }
+
+/* Visualizer List Styles */
+.visualizer-list-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 0;
+}
+
+.visualizer-list-container .panel-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.layer-count {
+    font-size: 12px;
+    color: #888;
+    font-weight: normal;
+}
+
+.visualizer-list {
+    flex: 1;
+    padding: 12px 20px 20px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.empty-list {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.3);
+    margin-top: 40px;
+}
+
+.empty-list i {
+    font-size: 32px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.empty-list p {
+    font-size: 12px;
+}
+
+.visualizer-list-item {
+    display: flex;
+    align-items: flex-start; /* Changed from center to flex-start */
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    min-height: 48px; /* Add minimum height to accommodate buttons */
+}
+
+.visualizer-list-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.visualizer-list-item.selected {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: rgba(0, 212, 255, 0.4);
+}
+
+.visualizer-list-item.hidden {
+    opacity: 0.5;
+}
+
+.layer-icon {
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 12px;
+    flex-shrink: 0;
+    align-self: flex-start; /* Align to top */
+    margin-top: 2px; /* Add slight top margin */
+}
+
+.layer-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.layer-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px; /* Add margin for spacing */
+}
+
+.layer-details {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 6px; /* Add margin before buttons */
+}
+
+.layer-controls {
+    display: flex;
+    gap: 3px; /* Reduced gap */
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    flex-wrap: wrap; /* Allow wrapping if needed */
+}
+
+.visualizer-list-item:hover .layer-controls {
+    opacity: 1;
+}
+
+.layer-control-btn {
+    width: 20px; /* Reduced from 24px */
+    height: 20px; /* Reduced from 24px */
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px; /* Slightly smaller radius */
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px; /* Reduced from 10px */
+    transition: all 0.2s ease;
+}
+
+.layer-control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1); /* Add slight scale on hover */
+}
+
+.layer-control-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.layer-control-btn:disabled:hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.layer-control-btn.visibility-btn.hidden {
+    background: rgba(255, 107, 53, 0.2);
+    border-color: rgba(255, 107, 53, 0.4);
+    color: #ff6b35;
+}
+
+.layer-control-btn.remove-btn:hover {
+    background: rgba(255, 69, 58, 0.2);
+    border-color: rgba(255, 69, 58, 0.4);
+    color: #ff453a;
+}
+
+.layer-drag-handle {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    cursor: grab;
+    font-size: 8px;
+    align-self: flex-start; /* Align to top */
+    margin-top: 4px; /* Add slight top margin */
+}
+
+.layer-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Update left panel to use flexbox */
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.visualizer-library {
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+/* Update collapsed state */
+.left-panel.collapsed .visualizer-list-container {
+    display: none;
+}
+
+* Right Panel Styles */
+.right-panel {
+    width: var(--right-panel-width, 300px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.3s ease;
+}
+
+.properties-content {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto; /* Add this line */
+    min-height: 0; /* Add this line to allow flex shrinking */
+}
+
+/* Panel collapsed states */
+.right-panel.collapsed {
+    width: 40px !important;
+}
+
+.right-panel.collapsed .properties-content,
+.right-panel.collapsed .panel-header h3 {
+    display: none;
+}
+
+.right-panel.collapsed .panel-toggle {
+    transform: rotate(180deg);
+}
+
+/* Ensure scrollbar styling is applied to properties content */
+.properties-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.properties-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.properties-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.properties-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.properties-content::-webkit-scrollbar-corner {
+    background: rgba(255, 255, 255, 0.05);
+}

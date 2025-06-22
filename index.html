@@ -77,52 +77,19 @@
                     </button>
                 </div>
                 <div class="visualizer-library" id="visualizerLibrary">
-                    <div class="visualizer-category">
-                        <h4>Basic</h4>
-                        <div class="visualizer-item" data-type="waveform" draggable="true">
-                            <div class="visualizer-preview">
-                                <i class="fas fa-wave-square"></i>
-                            </div>
-                            <span>Waveform</span>
-                        </div>
-                        <div class="visualizer-item" data-type="frequency" draggable="true">
-                            <div class="visualizer-preview">
-                                <i class="fas fa-chart-bar"></i>
-                            </div>
-                            <span>Frequency Bars</span>
-                        </div>
-                        <div class="visualizer-item" data-type="circle" draggable="true">
-                            <div class="visualizer-preview">
-                                <i class="fas fa-circle"></i>
-                            </div>
-                            <span>Circle</span>
-                        </div>
-                        <div class="visualizer-item" data-type="spiral" draggable="true">
-                            <div class="visualizer-preview">
-                                <i class="fas fa-hurricane"></i>
-                            </div>
-                            <span>Spiral</span>
-                        </div>
+                    <!-- This will be populated by populateVisualizerLibrary() -->
+                </div>
+                
+                <!-- Moved outside of visualizer-library -->
+                <div class="visualizer-list-container">
+                    <div class="panel-header">
+                        <h3>Canvas Layers</h3>
+                        <span class="layer-count" id="layerCount">0 items</span>
                     </div>
-                    <div class="visualizer-category">
-                        <h4>Advanced</h4>
-                        <div class="visualizer-item" data-type="radial" draggable="true">
-                            <div class="visualizer-preview">
-                                <i class="fas fa-dot-circle"></i>
-                            </div>
-                            <span>Radial</span>
-                        </div>
-                        <div class="visualizer-item" data-type="particles" draggable="true">
-                            <div class="visualizer-preview">
-                                <i class="fas fa-star"></i>
-                            </div>
-                            <span>Particles</span>
-                        </div>
-                        <div class="visualizer-item" data-type="spectrum" draggable="true">
-                            <div class="visualizer-preview">
-                                <i class="fas fa-signal"></i>
-                            </div>
-                            <span>Spectrum</span>
+                    <div class="visualizer-list" id="visualizerList">
+                        <div class="empty-list">
+                            <i class="fas fa-layer-group"></i>
+                            <p>No visualizers on canvas</p>
                         </div>
                     </div>
                 </div>

@@ -128,13 +128,14 @@ body {
 
 /* Left Panel Styles */
 .left-panel {
-    width: 280px;
+    width: var(--left-panel-width, 280px); /* Use CSS variable with fallback */
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden; /* Changed from overflow-y: auto */
+    transition: width 0.3s ease; /* Add smooth transition */
 }
 
 .panel-header {
@@ -150,7 +151,7 @@ body {
 
 .visualizer-library {
     padding: 20px;
-}
+} 
 
 .visualizer-category {
     margin-bottom: 24px;
@@ -363,13 +364,14 @@ body {
 
 /* Right Panel Styles */
 .right-panel {
-    width: 300px;
+    width: var(--right-panel-width, 300px); /* Use CSS variable with fallback */
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
+    transition: width 0.3s ease; /* Add smooth transition */
 }
 
 .properties-content {
@@ -509,24 +511,31 @@ body {
 /* Resize Handles for Panels */
 .resize-handle {
     position: absolute;
-    top: 60px;
+    top: 0;
     bottom: 0;
     width: 4px;
     cursor: col-resize;
     background: transparent;
-    z-index: 1001;
+    z-index: 1000;
+    transition: background 0.2s ease;
 }
 
 .resize-handle:hover {
     background: rgba(0, 212, 255, 0.3);
 }
 
+.resize-handle:active {
+    background: rgba(0, 212, 255, 0.5);
+}
+
 .resize-left {
-    left: 276px;
+    left: var(--left-panel-width, 280px);
+    transform: translateX(-2px);
 }
 
 .resize-right {
-    right: 296px;
+    right: var(--right-panel-width, 300px);
+    transform: translateX(2px);
 }
 
 /* Drag and Drop States */
@@ -785,7 +794,7 @@ body {
 
 /* Panel transitions */
 .left-panel, .right-panel {
-    transition: width 0.3s ease;
+    transition: width 0.3s ease, transform 0.3s ease;
 }
 
 /* Update resize handle positions */

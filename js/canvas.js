@@ -1065,6 +1065,7 @@ class CanvasManager {
         if (visualizer) {
             visualizer.setSelected(true);
             this.updatePropertiesPanel(visualizer);
+            this.updateVisualizerList(); // Add this line
             this.hideDropZone();
             //console.log('Selected visualizer:', visualizer.constructor.name, 'ID:', visualizer.id);
         } else {
@@ -1073,6 +1074,7 @@ class CanvasManager {
                 this.showDropZone();
             }
             this.resetClickCycle();
+            this.updateVisualizerList(); // Add this line
         }
     }
 
@@ -1082,6 +1084,7 @@ class CanvasManager {
             this.visualizers.push(visualizer);
             this.selectVisualizer(visualizer);
             this.hideDropZone();
+            this.updateVisualizerList(); // Add this line
             return visualizer;
         } catch (error) {
             //console.error('Failed to create visualizer:', error);
@@ -1098,8 +1101,245 @@ class CanvasManager {
             if (this.visualizers.length === 0) {
                 this.showDropZone();
             }
+            this.updateVisualizerList(); // Add this line
         }
-    } updateAudioData(audioData, frequencyData) {
+    }
+
+    updateVisualizerList() {
+        const listContainer = document.getElementById('visualizerList');
+        const layerCount = document.getElementById('layerCount');
+        
+        if (!listContainer || !layerCount) return;
+
+        // Update layer count
+        layerCount.textContent = `${this.visualizers.length} item${this.visualizers.length !== 1 ? 's' : ''}`;
+
+        if (this.visualizers.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-list">
+                    <i class="fas fa-layer-group"></i>
+                    <p>No visualizers on canvas</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Build the list (reverse order to show front-to-back)
+        const listHTML = this.visualizers.slice().reverse().map((visualizer, index) => {
+            const realIndex = this.visualizers.length - 1 - index;
+            const isSelected = this.selectedVisualizer === visualizer;
+            const typeName = visualizer.constructor.name.replace('Visualizer', '');
+            
+            return `
+                <div class="visualizer-list-item ${isSelected ? 'selected' : ''} ${!visualizer.visible ? 'hidden' : ''}" 
+                     data-visualizer-id="${visualizer.id}" 
+                     data-index="${realIndex}">
+                    <div class="layer-drag-handle">
+                        <i class="fas fa-grip-lines"></i>
+                    </div>
+                    <div class="layer-icon">
+                        ${this.getVisualizerIcon(typeName)}
+                    </div>
+                    <div class="layer-info">
+                        <div class="layer-name">${typeName}</div>
+                        <div class="layer-details">${Math.round(visualizer.x)}, ${Math.round(visualizer.y)}</div>
+                    </div>
+                    <div class="layer-controls">
+                        <button class="layer-control-btn visibility-btn ${!visualizer.visible ? 'hidden' : ''}" 
+                                title="${visualizer.visible ? 'Hide' : 'Show'}" 
+                                data-action="visibility">
+                            <i class="fas fa-${visualizer.visible ? 'eye' : 'eye-slash'}"></i>
+                        </button>
+                        <button class="layer-control-btn up-btn" 
+                                title="Move Up" 
+                                data-action="up"
+                                ${realIndex === this.visualizers.length - 1 ? 'disabled' : ''}>
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                        <button class="layer-control-btn down-btn" 
+                                title="Move Down" 
+                                data-action="down"
+                                ${realIndex === 0 ? 'disabled' : ''}>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <button class="layer-control-btn remove-btn" 
+                                title="Remove" 
+                                data-action="remove">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        listContainer.innerHTML = listHTML;
+
+        // Bind event listeners
+        this.bindVisualizerListEvents();
+    }
+
+    // Helper method to get appropriate icon for visualizer type
+    getVisualizerIcon(type) {
+        const icons = {
+            'Waveform': '<i class="fas fa-wave-square"></i>',
+            'Frequency': '<i class="fas fa-chart-bar"></i>',
+            'Circle': '<i class="fas fa-circle"></i>',
+            'Spiral': '<i class="fas fa-hurricane"></i>',
+            'Radial': '<i class="fas fa-dot-circle"></i>',
+            'Particles': '<i class="fas fa-star"></i>',
+            'Spectrum': '<i class="fas fa-signal"></i>',
+            'Wave': '<i class="fas fa-water"></i>',
+            'Lissajous': '<i class="fas fa-infinity"></i>',
+            'Plasma': '<i class="fas fa-fire"></i>',
+            'Matrix': '<i class="fas fa-code"></i>',
+            'Tunnel': '<i class="fas fa-circle-dot"></i>',
+            'Fog': '<i class="fas fa-cloud"></i>',
+            'Equalizer3D': '<i class="fas fa-cubes"></i>'
+        };
+        return icons[type] || '<i class="fas fa-square"></i>';
+    }
+
+    // Bind event listeners for the visualizer list
+    bindVisualizerListEvents() {
+        const listItems = document.querySelectorAll('.visualizer-list-item');
+        
+        listItems.forEach(item => {
+            const visualizerId = item.dataset.visualizerId;
+            const visualizer = this.visualizers.find(v => v.id === visualizerId);
+            
+            if (!visualizer) return;
+
+            // Click to select visualizer
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('.layer-control-btn')) return;
+                this.selectVisualizer(visualizer);
+            });
+
+            // Control button handlers
+            const controlBtns = item.querySelectorAll('.layer-control-btn');
+            controlBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    
+                    switch(action) {
+                        case 'visibility':
+                            this.toggleVisualizerVisibility(visualizer);
+                            break;
+                        case 'up':
+                            this.moveVisualizerUp(visualizer);
+                            break;
+                        case 'down':
+                            this.moveVisualizerDown(visualizer);
+                            break;
+                        case 'remove':
+                            if (confirm(`Remove ${visualizer.constructor.name}?`)) {
+                                this.removeVisualizer(visualizer);
+                            }
+                            break;
+                    }
+                });
+            });
+
+            // Drag and drop for reordering
+            const dragHandle = item.querySelector('.layer-drag-handle');
+            if (dragHandle) {
+                dragHandle.addEventListener('mousedown', (e) => {
+                    this.startVisualizerDrag(e, visualizer, item);
+                });
+            }
+        });
+    }
+
+    // Move visualizer up in layer order (towards front)
+    moveVisualizerUp(visualizer) {
+        const index = this.visualizers.indexOf(visualizer);
+        if (index < this.visualizers.length - 1) {
+            // Swap with next visualizer
+            [this.visualizers[index], this.visualizers[index + 1]] = 
+            [this.visualizers[index + 1], this.visualizers[index]];
+            this.updateVisualizerList();
+            
+            if (window.app) {
+                window.app.showNotification(
+                    'Layer Moved',
+                    `${visualizer.constructor.name} moved up`,
+                    'info',
+                    1000
+                );
+            }
+        }
+    }
+
+    // Move visualizer down in layer order (towards back)
+    moveVisualizerDown(visualizer) {
+        const index = this.visualizers.indexOf(visualizer);
+        if (index > 0) {
+            // Swap with previous visualizer
+            [this.visualizers[index], this.visualizers[index - 1]] = 
+            [this.visualizers[index - 1], this.visualizers[index]];
+            this.updateVisualizerList();
+            
+            if (window.app) {
+                window.app.showNotification(
+                    'Layer Moved',
+                    `${visualizer.constructor.name} moved down`,
+                    'info',
+                    1000
+                );
+            }
+        }
+    }
+
+    // Handle drag and drop reordering (placeholder for future implementation)
+    startVisualizerDrag(e, visualizer, item) {
+        // This would implement drag and drop reordering
+        // For now, we'll keep it simple with the up/down buttons
+        console.log('Drag started for:', visualizer.constructor.name);
+    }
+
+    // Update existing methods to refresh the list
+    toggleVisualizerVisibility(visualizer) {
+        visualizer.visible = !visualizer.visible;
+        this.updatePropertiesPanel(visualizer);
+        this.updateVisualizerList(); // Add this line
+
+        // Show notification
+        if (window.app) {
+            window.app.showNotification(
+                'Visibility Changed',
+                `${visualizer.constructor.name} is now ${visualizer.visible ? 'visible' : 'hidden'}`,
+                'info',
+                2000
+            );
+        }
+    }
+
+    bringToFront(visualizer) {
+        const index = this.visualizers.indexOf(visualizer);
+        if (index > -1) {
+            // Remove from current position
+            this.visualizers.splice(index, 1);
+            // Add to end (front)
+            this.visualizers.push(visualizer);
+            this.updateVisualizerList(); // Add this line
+            //console.log(`Brought ${visualizer.constructor.name} to front`);
+        }
+    }
+
+    sendToBack(visualizer) {
+        const index = this.visualizers.indexOf(visualizer);
+        if (index > -1) {
+            // Remove from current position
+            this.visualizers.splice(index, 1);
+            // Add to beginning (back)
+            this.visualizers.unshift(visualizer);
+            this.updateVisualizerList(); // Add this line
+            //console.log(`Sent ${visualizer.constructor.name} to back`);
+        }
+    }
+    
+    updateAudioData(audioData, frequencyData) {
         this.visualizers.forEach(visualizer => {
             visualizer.updateAudioData(audioData, frequencyData);
         });

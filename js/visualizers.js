@@ -2278,6 +2278,7 @@ class MatrixVisualizer extends BaseVisualizer {
         this.trailLength = 18;
         this.drops = [];
         this.columns = 0;
+        this.fadeDistance = 60; // Distance over which drops fade out at bottom
         this.initializeDrops();
     }
 
@@ -2285,11 +2286,13 @@ class MatrixVisualizer extends BaseVisualizer {
         this.columns = Math.floor(this.width / this.fontSize);
         this.drops = [];
         for (let i = 0; i < this.columns; i++) {
-            // Each drop is an object: { y, trail, speed }
+            // Each drop is an object: { y, trail, speed, alpha }
             this.drops[i] = {
                 y: Math.random() * this.height,
                 trail: Array.from({ length: this.trailLength }, () => Math.floor(Math.random() * this.characters.length)),
-                speed: this.fallSpeed * (0.8 + Math.random() * 0.4)
+                speed: this.fallSpeed * (0.8 + Math.random() * 0.4),
+                alpha: 1, // Overall alpha for the entire drop trail
+                fadePhase: 'active' // 'active', 'fading', 'respawning'
             };
         }
     }
@@ -2307,7 +2310,8 @@ class MatrixVisualizer extends BaseVisualizer {
                 fallSpeed: this.fallSpeed,
                 fontSize: this.fontSize,
                 rainDensity: this.rainDensity,
-                trailLength: this.trailLength
+                trailLength: this.trailLength,
+                fadeDistance: this.fadeDistance
             }
         };
     }
@@ -2317,6 +2321,8 @@ class MatrixVisualizer extends BaseVisualizer {
             if (property === 'trailLength') {
                 this.trailLength = Math.max(5, Math.min(40, parseInt(value)));
                 this.initializeDrops();
+            } else if (property === 'fadeDistance') {
+                this.fadeDistance = Math.max(20, Math.min(200, parseInt(value)));
             } else {
                 this[property] = parseFloat(value);
                 if (property === 'fontSize' || property === 'rainDensity' || property === 'fallSpeed') {
@@ -2337,9 +2343,9 @@ class MatrixVisualizer extends BaseVisualizer {
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
 
-        // Fading background for trails
+        // More subtle background fade for better trail effect
         ctx.globalAlpha = this.opacity;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.12)'; // Reduced from 0.18 for longer trails
         ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
 
         ctx.font = `${this.fontSize}px monospace`;
@@ -2357,42 +2363,83 @@ class MatrixVisualizer extends BaseVisualizer {
             const drop = this.drops[i];
             let y = drop.y - this.height / 2;
 
-            // Draw the trail
+            // Calculate fade-out region
+            const fadeStartY = this.height / 2 - this.fadeDistance;
+            const fadeEndY = this.height / 2 + this.trailLength * this.fontSize;
+
+            // Determine drop phase and calculate fade alpha
+            let dropFadeAlpha = 1;
+            
+            if (drop.fadePhase === 'active') {
+                // Check if drop is entering fade zone
+                if (y > fadeStartY) {
+                    drop.fadePhase = 'fading';
+                }
+            } else if (drop.fadePhase === 'fading') {
+                // Calculate fade based on position
+                if (y >= fadeStartY && y <= fadeEndY) {
+                    const fadeProgress = (y - fadeStartY) / (fadeEndY - fadeStartY);
+                    dropFadeAlpha = Math.max(0, 1 - fadeProgress);
+                    drop.alpha = dropFadeAlpha;
+                }
+                
+                // Check if completely faded
+                if (y > fadeEndY || dropFadeAlpha <= 0.01) {
+                    drop.fadePhase = 'respawning';
+                    // Set new position off-screen at top
+                    drop.y = -Math.random() * this.height * 0.5 - this.height / 2;
+                    // Generate new trail
+                    drop.trail = Array.from({ length: this.trailLength }, () => Math.floor(Math.random() * this.characters.length));
+                    drop.speed = this.fallSpeed * (0.8 + Math.random() * 0.4);
+                    drop.alpha = 1;
+                    drop.fadePhase = 'active';
+                    continue; // Skip rendering this frame for the respawned drop
+                }
+            }
+
+            // Draw the trail with fade effect
             for (let t = 0; t < this.trailLength; t++) {
                 const charIndex = drop.trail[t];
                 const char = this.characters[charIndex];
                 const trailY = y - t * this.fontSize;
 
-                // Fade out trail: head is brightest, tail is faint
-                let alpha = this.opacity * (1 - t / this.trailLength);
+                // Calculate trail fade (head brightest, tail fades)
+                let trailAlpha = this.opacity * (1 - t / this.trailLength);
+                
+                // Apply drop fade
+                trailAlpha *= drop.alpha;
+
+                if (trailAlpha <= 0.01) continue; // Skip very transparent characters
+
+                // Head character is brightest white, trail follows main color
                 if (t === 0) {
                     ctx.fillStyle = '#fff';
-                    ctx.globalAlpha = Math.min(1, alpha * 1.2);
+                    ctx.globalAlpha = Math.min(1, trailAlpha * 1.2);
                 } else {
                     ctx.fillStyle = this.color;
-                    ctx.globalAlpha = alpha * 0.8;
+                    ctx.globalAlpha = trailAlpha * 0.8;
                 }
 
-                if (trailY > -this.height / 2 && trailY < this.height / 2) {
+                // Only draw if within visible area (with some margin)
+                if (trailY > -this.height / 2 - this.fontSize && trailY < this.height / 2 + this.fontSize) {
                     ctx.fillText(char, -this.width / 2 + i * this.fontSize + this.fontSize / 2, trailY);
                 }
             }
 
-            // Advance drop
-            drop.y += drop.speed * effectiveSpeed * (0.7 + Math.random() * 0.6);
+            // Update drop position (only if not respawning)
+            if (drop.fadePhase !== 'respawning') {
+                drop.y += drop.speed * effectiveSpeed * (0.7 + Math.random() * 0.6);
 
-            // Occasionally randomize trail characters for flicker
-            if (Math.random() < 0.2) {
-                drop.trail[Math.floor(Math.random() * this.trailLength)] = Math.floor(Math.random() * this.characters.length);
+                // Occasionally randomize trail characters for flicker effect
+                if (Math.random() < 0.15) { // Reduced frequency slightly
+                    const randomIndex = Math.floor(Math.random() * this.trailLength);
+                    drop.trail[randomIndex] = Math.floor(Math.random() * this.characters.length);
+                }
             }
 
-            // Reset drop if off screen or randomly for rainDensity
-            if (drop.y - this.trailLength * this.fontSize > this.height / 2 ||
-                Math.random() > (1 - this.rainDensity * 0.02)) {
-                drop.y = -Math.random() * this.height * 0.3;
-                // New trail
-                drop.trail = Array.from({ length: this.trailLength }, () => Math.floor(Math.random() * this.characters.length));
-                drop.speed = this.fallSpeed * (0.8 + Math.random() * 0.4);
+            // Random respawn based on rain density (only for active drops)
+            if (drop.fadePhase === 'active' && Math.random() > (1 - this.rainDensity * 0.015)) {
+                drop.fadePhase = 'fading';
             }
         }
 
@@ -2407,7 +2454,8 @@ class MatrixVisualizer extends BaseVisualizer {
             fallSpeed: this.fallSpeed,
             fontSize: this.fontSize,
             rainDensity: this.rainDensity,
-            trailLength: this.trailLength
+            trailLength: this.trailLength,
+            fadeDistance: this.fadeDistance
         };
     }
 }
