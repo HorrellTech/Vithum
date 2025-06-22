@@ -1407,6 +1407,13 @@ class CanvasManager {
                 <input type="number" class="property-input" value="${Math.round(properties.size.height)}" 
                        data-category="size" data-property="height" min="50">
             </div>
+            <div class="property-item">
+                <div class="size-controls">
+                    <button class="btn-small" id="fitToViewport">
+                        <i class="fas fa-expand-arrows-alt"></i> Fit to Viewport
+                    </button>
+                </div>
+            </div>
         </div>
         
         <div class="property-group">
@@ -1799,6 +1806,96 @@ class CanvasManager {
             `;
         }
 
+        // FogVisualizer
+        if (visualizer instanceof FogVisualizer) {
+            const fog = properties.fog;
+            propertiesHTML += `
+        <div class="property-group">
+            <h4>Fog Properties</h4>
+            <div class="property-item">
+                <label class="property-label">Density</label>
+                <input type="range" class="property-input property-range" value="${fog.density}" data-category="fog" data-property="density" min="0.1" max="1" step="0.05">
+                <span class="range-value">${Math.round(fog.density * 100)}%</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Speed</label>
+                <input type="range" class="property-input property-range" value="${fog.speed}" data-category="fog" data-property="speed" min="0" max="2" step="0.01">
+                <span class="range-value">${fog.speed}</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Noise Scale</label>
+                <input type="range" class="property-input property-range" value="${fog.noiseScale}" data-category="fog" data-property="noiseScale" min="0.002" max="0.03" step="0.001">
+                <span class="range-value">${fog.noiseScale}</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Layers</label>
+                <input type="number" class="property-input" value="${fog.layers}" data-category="fog" data-property="layers" min="1" max="6">
+            </div>
+            <div class="property-item">
+                <label class="property-label">Color 1</label>
+                <input type="color" class="property-input" value="${fog.color1}" data-category="fog" data-property="color1">
+            </div>
+            <div class="property-item">
+                <label class="property-label">Color 2</label>
+                <input type="color" class="property-input" value="${fog.color2}" data-category="fog" data-property="color2">
+            </div>
+        </div>
+    `;
+        }
+
+        // StarfieldVisualizer
+        if (visualizer instanceof StarfieldVisualizer) {
+            const starfield = properties.starfield;
+            propertiesHTML += `
+        <div class="property-group">
+            <h4>Starfield Properties</h4>
+            <div class="property-item">
+                <label class="property-label">Star Count</label>
+                <input type="number" class="property-input" value="${starfield.starCount}" data-category="starfield" data-property="starCount" min="50" max="2000">
+            </div>
+            <div class="property-item">
+                <label class="property-label">Speed</label>
+                <input type="range" class="property-input property-range" value="${starfield.speed}" data-category="starfield" data-property="speed" min="0.1" max="5" step="0.1">
+                <span class="range-value">${starfield.speed}</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Zoom Speed</label>
+                <input type="range" class="property-input property-range" value="${starfield.zoomSpeed}" data-category="starfield" data-property="zoomSpeed" min="0.001" max="0.1" step="0.001">
+                <span class="range-value">${starfield.zoomSpeed}</span>
+            </div>
+        </div>
+    `;
+        }
+
+        // PolygonPulseVisualizer
+        if (visualizer instanceof PolygonPulseVisualizer) {
+            const poly = properties.polygonpulse;
+            propertiesHTML += `
+        <div class="property-group">
+            <h4>Polygon Pulse</h4>
+            <div class="property-item">
+                <label class="property-label">Sides</label>
+                <input type="number" class="property-input" value="${poly.sides}" data-category="polygonpulse" data-property="sides" min="3" max="16">
+            </div>
+            <div class="property-item">
+                <label class="property-label">Morph</label>
+                <input type="range" class="property-input property-range" value="${poly.morph}" data-category="polygonpulse" data-property="morph" min="0" max="1" step="0.01">
+                <span class="range-value">${poly.morph}</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Pulse</label>
+                <input type="range" class="property-input property-range" value="${poly.pulse}" data-category="polygonpulse" data-property="pulse" min="0" max="2" step="0.01">
+                <span class="range-value">${poly.pulse}</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Rotation Speed</label>
+                <input type="range" class="property-input property-range" value="${poly.rotationSpeed}" data-category="polygonpulse" data-property="rotationSpeed" min="0" max="5" step="0.01">
+                <span class="range-value">${poly.rotationSpeed}</span>
+            </div>
+        </div>
+    `;
+        }
+
         // Add keyboard shortcuts
         propertiesHTML += `
         <div class="property-group">
@@ -1861,6 +1958,7 @@ class CanvasManager {
         const centerXBtn = document.getElementById('centerX');
         const centerYBtn = document.getElementById('centerY');
         const centerBothBtn = document.getElementById('centerBoth');
+        const fitToViewportBtn = content.querySelector('#fitToViewport');
 
         if (bringToFrontBtn) {
             bringToFrontBtn.addEventListener('click', () => {
@@ -1911,6 +2009,12 @@ class CanvasManager {
             });
         }
 
+        if (fitToViewportBtn) {
+            fitToViewportBtn.addEventListener('click', () => {
+                this.fitVisualizerToViewport(visualizer);
+            });
+        }
+
         // Bind property change events
         this.bindPropertyEvents(visualizer);
     }
@@ -1958,6 +2062,45 @@ class CanvasManager {
                 `${visualizer.constructor.name} centered in viewport`,
                 'success',
                 1500
+            );
+        }
+    }
+
+    fitVisualizerToViewport(visualizer) {
+        // Use the video area dimensions as the viewport
+        const viewportWidth = this.videoArea.width;  // 1280
+        const viewportHeight = this.videoArea.height; // 720
+
+        const padding = 0; // Leave some padding around edges
+
+        // Calculate new size using video area dimensions
+        const newWidth = Math.max(50, viewportWidth - (padding * 2));
+        const newHeight = Math.max(50, viewportHeight - (padding * 2));
+
+        // Use resize() method instead of directly setting width/height
+        visualizer.resize(newWidth, newHeight);
+
+        // Center the visualizer within the video area
+        const centerX = this.videoArea.x + (this.videoArea.width / 2);
+        const centerY = this.videoArea.y + (this.videoArea.height / 2);
+
+        visualizer.x = centerX - (visualizer.width / 2);
+        visualizer.y = centerY - (visualizer.height / 2);
+
+        // Ensure the visualizer stays within video area bounds
+        visualizer.x = Math.max(this.videoArea.x, Math.min(visualizer.x, this.videoArea.x + this.videoArea.width - visualizer.width));
+        visualizer.y = Math.max(this.videoArea.y, Math.min(visualizer.y, this.videoArea.y + this.videoArea.height - visualizer.height));
+
+        // Update the properties panel to reflect changes
+        this.updatePropertiesPanel(visualizer);
+
+        // Show notification
+        if (window.app) {
+            window.app.showNotification(
+                'Fitted to Video Area',
+                `${visualizer.constructor.name} resized to ${Math.round(visualizer.width)}×${Math.round(visualizer.height)} and centered in video area`,
+                'success',
+                2000
             );
         }
     }

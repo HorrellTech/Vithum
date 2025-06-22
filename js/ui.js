@@ -557,7 +557,11 @@ class UIManager {
             { type: 'fractaltree', name: 'Fractal Tree', icon: 'fas fa-tree', description: 'Growing fractal tree branches' },
             { type: 'matrix', name: 'Matrix Rain', icon: 'fas fa-braille', description: 'Digital rain effect' },
             { type: 'sunburst', name: 'Sunburst', icon: 'fas fa-certificate', description: 'Radial sunburst rays' },
-            { type: 'equalizer3d', name: '3D Equalizer', icon: 'fas fa-cubes', description: 'Equalizer with 3D perspective' }
+            { type: 'equalizer3d', name: '3D Equalizer', icon: 'fas fa-cubes', description: 'Equalizer with 3D perspective' },
+
+            { type: 'fog', name: 'Reactive Fog', icon: 'fas fa-smog', description: 'Audio-reactive fog/mist' },
+            { type: 'starfield', name: 'Starfield', icon: 'fas fa-star-of-life', description: 'Infinite zooming starfield' },
+            { type: 'polygonpulse', name: 'Polygon Pulse', icon: 'fas fa-draw-polygon', description: 'Morphing polygon pulse' }
         ];
 
         libraryContainer.innerHTML = `
@@ -618,14 +622,17 @@ class UIManager {
             'plasma': 'advanced',
             'network': 'advanced',
             'kaleidoscope': 'advanced',
+            'sunburst': 'advanced',
+            'equalizer3d': 'advanced',
+            'polygonpulse': 'advanced',
             'galaxy': 'effects',
             'dna': 'effects',
             'flower': 'effects',
             'tunnel': 'effects',
             'matrix': 'effects',
-            'sunburst': 'advanced',
-            'equalizer3d': 'advanced',
-            'fractaltree': 'effects'
+            'fractaltree': 'effects',
+            'starfield': 'effects',
+            'fog': 'effects'
         };
         return categories[type] || 'basic';
     }

@@ -2614,6 +2614,354 @@ class Equalizer3DVisualizer extends BaseVisualizer {
     }
 }
 
+class FogVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.density = 0.5;
+        this.speed = 0.5;
+        this.layers = 3;
+        this.time = 0;
+        this.color1 = '#00d4ff';
+        this.color2 = '#ffffff';
+        this.cloudsPerLayer = 12;
+        this.cloudBlobs = [];
+        this.initClouds();
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            fog: {
+                density: this.density,
+                speed: this.speed,
+                layers: this.layers,
+                color1: this.color1,
+                color2: this.color2
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'fog') {
+            if (property === 'color1' || property === 'color2') {
+                this[property] = value;
+            } else if (property === 'layers') {
+                this.layers = Math.max(1, Math.min(6, parseInt(value)));
+                this.initClouds();
+            } else {
+                this[property] = parseFloat(value);
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    initClouds() {
+        this.cloudBlobs = [];
+        for (let l = 0; l < this.layers; l++) {
+            let layer = [];
+            for (let i = 0; i < this.cloudsPerLayer; i++) {
+                layer.push({
+                    x: Math.random(),
+                    y: Math.random(),
+                    r: 0.18 + Math.random() * 0.18,
+                    dx: (Math.random() - 0.5) * 0.02,
+                    dy: (Math.random() - 0.5) * 0.01,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+            this.cloudBlobs.push(layer);
+        }
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+        ctx.save();
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.time += this.speed * this.animationSpeed * 0.5;
+
+        // Audio influence
+        let audioBoost = 1;
+        if (this.frequencyData && this.reactToAudio) {
+            audioBoost = 1 + Utils.average(this.getFilteredFrequencyData()) / 255 * this.sensitivity * 0.5;
+        }
+
+        const maxR = Math.min(this.width, this.height) / 2;
+
+        for (let l = 0; l < this.layers; l++) {
+            const blobs = this.cloudBlobs[l];
+            const layerAlpha = (this.density / this.layers) * (0.7 + 0.3 * l / this.layers);
+            const color = Utils.lerpColor(this.color1, this.color2, l / (this.layers - 1 || 1));
+
+            for (let blob of blobs) {
+                // Animate position
+                blob.x += blob.dx * this.animationSpeed * 0.5;
+                blob.y += blob.dy * this.animationSpeed * 0.5;
+                blob.x += Math.sin(this.time * 0.1 + blob.phase) * 0.0005;
+                blob.y += Math.cos(this.time * 0.13 + blob.phase) * 0.0005;
+
+                // Wrap around
+                if (blob.x < 0) blob.x += 1;
+                if (blob.x > 1) blob.x -= 1;
+                if (blob.y < 0) blob.y += 1;
+                if (blob.y > 1) blob.y -= 1;
+
+                // Calculate ellipse position and size
+                const cx = (blob.x - 0.5) * this.width;
+                const cy = (blob.y - 0.5) * this.height;
+                const rx = blob.r * maxR * (1 + audioBoost * 0.2);
+                const ry = rx * (0.7 + Math.sin(this.time * 0.2 + blob.phase) * 0.2);
+
+                // Create radial gradient for soft cloud
+                const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rx, ry));
+                grad.addColorStop(0, color.replace('rgb', 'rgba').replace(')', `,${layerAlpha * 0.7 * audioBoost}`));
+                grad.addColorStop(0.7, color.replace('rgb', 'rgba').replace(')', `,${layerAlpha * 0.3 * audioBoost}`));
+                grad.addColorStop(1, color.replace('rgb', 'rgba').replace(')', `,0`));
+
+                ctx.save();
+                ctx.globalAlpha = 1;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        ctx.restore();
+    }
+}
+
+// Helper for color interpolation (returns CSS rgb string)
+if (!Utils.lerpColor) {
+    Utils.lerpColor = function (a, b, t) {
+        function hexToRgb(hex) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+            return [
+                parseInt(hex.substr(0, 2), 16),
+                parseInt(hex.substr(2, 2), 16),
+                parseInt(hex.substr(4, 2), 16)
+            ];
+        }
+        const ca = hexToRgb(a), cb = hexToRgb(b);
+        const r = Math.round(ca[0] + (cb[0] - ca[0]) * t);
+        const g = Math.round(ca[1] + (cb[1] - ca[1]) * t);
+        const b_ = Math.round(ca[2] + (cb[2] - ca[2]) * t);
+        return `rgb(${r},${g},${b_})`;
+    };
+}
+
+// Helper for color interpolation
+if (!Utils.lerpHex) {
+    Utils.lerpHex = function (a, b, t, ch) {
+        const hexToRgb = hex => {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+            return {
+                r: parseInt(hex.substr(0, 2), 16),
+                g: parseInt(hex.substr(2, 2), 16),
+                b: parseInt(hex.substr(4, 2), 16)
+            };
+        };
+        const ca = hexToRgb(a), cb = hexToRgb(b);
+        return Math.round(ca[ch] + (cb[ch] - ca[ch]) * t);
+    };
+}
+
+class StarfieldVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.starCount = 400;
+        this.speed = 1.5;
+        this.zoomSpeed = 0.01;
+        this.starScale = 1;
+        this.stars = [];
+        this.zoom = 1;
+        this.initStars();
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            starfield: {
+                starCount: this.starCount,
+                speed: this.speed,
+                zoomSpeed: this.zoomSpeed,
+                starScale: this.starScale
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'starfield') {
+            if (property === 'starCount') {
+                this.starCount = Math.max(50, Math.min(2000, parseInt(value)));
+                this.initStars();
+            } else {
+                this[property] = parseFloat(value);
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    initStars() {
+        this.stars = [];
+        for (let i = 0; i < this.starCount; i++) {
+            this.stars.push(this.randomStar());
+        }
+        this.zoom = 1;
+    }
+
+    randomStar() {
+        // Place stars in a cube, not just a plane, for infinite feel
+        return {
+            x: (Math.random() - 0.5) * 2,
+            y: (Math.random() - 0.5) * 2,
+            z: Math.random() * 0.9 + 0.1, // avoid z=0
+            size: Math.random() * 1.5 + 0.5
+        };
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+        ctx.save();
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        // Audio zoom
+        let audioZoom = 1;
+        if (this.frequencyData && this.reactToAudio) {
+            audioZoom = 1 + Utils.average(this.getFilteredFrequencyData()) / 255 * this.sensitivity * 0.5;
+        }
+
+        // Clear background to prevent color filling
+        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+
+        const maxZ = 1; // When a star is "too close", recycle it
+
+        for (let star of this.stars) {
+            // Move star forward (simulate camera moving forward)
+            star.z -= this.speed * this.animationSpeed * 0.008 * audioZoom;
+            
+            // If star is too close, recycle it to the back
+            if (star.z <= 0.001) {
+                // Reset star to back with new random position
+                star.x = (Math.random() - 0.5) * 2;
+                star.y = (Math.random() - 0.5) * 2;
+                star.z = maxZ;
+                star.size = Math.random() * 1.5 + 0.5;
+            }
+            
+            // Project 3D to 2D
+            const sx = (star.x / star.z) * this.width * 0.5;
+            const sy = (star.y / star.z) * this.height * 0.5;
+            
+            // Size based on distance (closer = bigger)
+            const size = (star.size / star.z) * 1;
+            
+            // Alpha based on distance and speed
+            const alpha = Math.min(1, (1 - star.z) * 2);
+            
+            // Only draw stars within bounds
+            if (Math.abs(sx) < this.width && Math.abs(sy) < this.height && size > 0) {
+                ctx.globalAlpha = this.opacity * alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(sx, sy, Math.max(0.1, size), 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+        
+        ctx.restore();
+        ctx.globalAlpha = 1;
+    }
+}
+
+// Super cool: "Polygon Pulse" - a polygon that pulses and morphs with audio
+class PolygonPulseVisualizer extends BaseVisualizer {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.sides = 6;
+        this.radius = 80;
+        this.morph = 0.3;
+        this.pulse = 0.5;
+        this.rotationSpeed = 0.5;
+        this.currentRotation = 0;
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            polygonpulse: {
+                sides: this.sides,
+                morph: this.morph,
+                pulse: this.pulse,
+                rotationSpeed: this.rotationSpeed
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'polygonpulse') {
+            if (property === 'sides') {
+                this.sides = Math.max(3, Math.min(16, parseInt(value)));
+            } else {
+                this[property] = parseFloat(value);
+            }
+        } else {
+            super.updateProperty(category, property, value);
+        }
+    }
+
+    render(ctx) {
+        if (!this.visible) return;
+        ctx.save();
+        const center = this.getCenter();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Utils.toRadians(this.rotation + this.currentRotation));
+        ctx.scale(this.scaleX, this.scaleY);
+        ctx.globalAlpha = this.opacity;
+
+        this.currentRotation += this.rotationSpeed * this.animationSpeed;
+
+        let audioPulse = 1, morph = this.morph;
+        if (this.frequencyData && this.reactToAudio) {
+            audioPulse += Utils.average(this.getFilteredFrequencyData()) / 255 * this.pulse * this.sensitivity;
+            morph += (Math.max(...this.getFilteredFrequencyData()) / 255) * 0.5 * this.morph;
+        }
+
+        ctx.beginPath();
+        for (let i = 0; i < this.sides; i++) {
+            const angle = (i / this.sides) * 2 * Math.PI;
+            const morphAngle = angle + Math.sin(this.currentRotation * 0.03 + angle * this.sides) * morph;
+            const r = this.radius * audioPulse * (0.8 + 0.2 * Math.sin(this.currentRotation * 0.1 + angle * 2));
+            const x = Math.cos(morphAngle) * r;
+            const y = Math.sin(morphAngle) * r;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.strokeWidth;
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
 // Visualizer factory
 class VisualizerFactory {
     static create(type, x, y, width, height) {
@@ -2660,6 +3008,12 @@ class VisualizerFactory {
                 return new SunburstVisualizer(x, y, width, height);
             case 'equalizer3d':
                 return new Equalizer3DVisualizer(x, y, width, height);
+            case 'fog':
+                return new FogVisualizer(x, y, width, height);
+            case 'starfield':
+                return new StarfieldVisualizer(x, y, width, height);
+            case 'polygonpulse':
+                return new PolygonPulseVisualizer(x, y, width, height);
             case 'reactiveimage':
                 return new ReactiveImageVisualizer(x, y, width, height);
             default:
@@ -2694,3 +3048,7 @@ window.MatrixVisualizer = MatrixVisualizer;
 window.SunburstVisualizer = SunburstVisualizer;
 window.Equalizer3DVisualizer = Equalizer3DVisualizer;
 window.ReactiveImageVisualizer = ReactiveImageVisualizer;
+
+window.FogVisualizer = FogVisualizer;
+window.StarfieldVisualizer = StarfieldVisualizer;
+window.PolygonPulseVisualizer = PolygonPulseVisualizer;
