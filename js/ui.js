@@ -178,9 +178,21 @@ class UIManager {
             toggleBottomPanelBtn.addEventListener('click', this.handleToggleBottomPanel);
         }
 
+        const fitToViewportBtn = document.getElementById('fitToViewport');
+        if (fitToViewportBtn) {
+            fitToViewportBtn.removeEventListener('click', this.handleFitToViewport);
+            fitToViewportBtn.addEventListener('click', this.handleFitToViewport);
+        }
+
         // Also bind resize handles
         this.bindResizeHandles();
     }
+
+    handleFitToViewport = () => {
+        if (window.app && window.app.canvas) {
+            window.app.canvas.fitToViewport();
+        }
+    };
 
     removeExistingListeners() {
         // Clone and replace nodes to remove all event listeners
@@ -1308,6 +1320,12 @@ class UIManager {
                     case 'e':
                         e.preventDefault();
                         this.exportProject();
+                        break;
+                    case '0':
+                        e.preventDefault();
+                        if (window.app && window.app.canvas) {
+                            window.app.canvas.fitToViewport();
+                        }
                         break;
                 }
             }

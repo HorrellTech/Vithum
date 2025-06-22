@@ -63,6 +63,72 @@ class CanvasManager {
         this.animate();
     }
 
+    fitToViewport() {
+        // Get the canvas wrapper (this is our actual viewport)
+        const wrapper = this.wrapper;
+        const wrapperRect = wrapper.getBoundingClientRect();
+
+        // Account for canvas controls
+        const canvasControls = document.querySelector('.canvas-controls');
+        const controlsHeight = canvasControls ? canvasControls.offsetHeight : 0;
+
+        // Calculate available viewport dimensions
+        const availableWidth = wrapperRect.width;
+        const availableHeight = wrapperRect.height - controlsHeight;
+
+        // Calculate the scale needed to fit the canvas in the available space
+        const scaleX = availableWidth / this.canvas.width;
+        const scaleY = availableHeight / this.canvas.height;
+        const optimalScale = Math.min(scaleX, scaleY);
+
+        // Apply a multiplier to make it zoom in more aggressively
+        const zoomMultiplier = 2.0; // Increased for more zoom
+        const targetScale = optimalScale * zoomMultiplier;
+
+        // Apply the zoom (but still respect limits)
+        this.zoom = Utils.clamp(targetScale, 0.1, 5);
+
+        // Calculate how much of the canvas we can see at this zoom level
+        const visibleCanvasWidth = availableWidth / this.zoom;
+        const visibleCanvasHeight = availableHeight / this.zoom;
+
+        // Position the viewport to show the top-left corner of the canvas
+        // We want canvas coordinate (0,0) to appear at viewport coordinate (0,0)
+        this.panX = 0;
+        this.panY = 0;
+
+        // If the canvas is smaller than the viewport at this zoom, center it
+        if (visibleCanvasWidth > this.canvas.width) {
+            this.panX = (visibleCanvasWidth - this.canvas.width) / 2;
+        }
+        if (visibleCanvasHeight > this.canvas.height) {
+            this.panY = (visibleCanvasHeight - this.canvas.height) / 2;
+        }
+
+        // Update zoom display
+        document.getElementById('zoomLevel').textContent = Math.round(this.zoom * 100) + '%';
+
+        // Show notification
+        if (window.app) {
+            window.app.showNotification(
+                'Viewport Fitted',
+                `Canvas fitted to viewport at ${Math.round(this.zoom * 100)}% zoom`,
+                'success',
+                2000
+            );
+        }
+    }
+
+    // Make sure updateTransform method exists and applies the pan/zoom
+    updateTransform() {
+        if (this.canvas) {
+            // Apply transform with proper origin
+            const transform = `scale(${this.zoom}) translate(${this.panX}px, ${this.panY}px)`;
+            this.canvas.style.transform = transform;
+            this.canvas.style.transformOrigin = '0 0';
+        }
+    }
+
     setupCanvas() {
         this.resizeCanvas();
 

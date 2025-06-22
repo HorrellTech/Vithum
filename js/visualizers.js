@@ -1541,7 +1541,7 @@ class GalaxyVisualizer extends BaseVisualizer {
         ctx.strokeStyle = this.color + '40';
         ctx.lineWidth = 3;
         
-        for (let arm = 0; arm < this.armCount; arm++) {
+        /*for (let arm = 0; arm < this.armCount; arm++) {
             ctx.beginPath();
             const armOffset = (arm / this.armCount) * 2 * Math.PI;
             
@@ -1557,7 +1557,7 @@ class GalaxyVisualizer extends BaseVisualizer {
                 }
             }
             ctx.stroke();
-        }
+        }*/
 
         // Draw and update stars
         this.stars.forEach(star => {
@@ -1739,10 +1739,36 @@ class FlowerVisualizer extends BaseVisualizer {
 class TunnelVisualizer extends BaseVisualizer {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.rings = 20;
-        this.tunnelSpeed = 3;
+        this.rings = 30;
+        this.tunnelSpeed = 2;
         this.currentDepth = 0;
-        this.perspective = 0.8;
+        this.perspective = 0.9;
+        this.segments = 128;
+        this.twist = 180; // Degrees of twist from front to back
+        this.wallThickness = 0.7; // How much audio affects the walls
+    }
+
+    getProperties() {
+        const baseProps = super.getProperties();
+        return {
+            ...baseProps,
+            tunnel: {
+                rings: this.rings,
+                tunnelSpeed: this.tunnelSpeed,
+                perspective: this.perspective,
+                segments: this.segments,
+                twist: this.twist,
+                wallThickness: this.wallThickness
+            }
+        };
+    }
+
+    updateProperty(category, property, value) {
+        if (category === 'tunnel') {
+            this[property] = parseFloat(value);
+        } else {
+            super.updateProperty(category, property, value);
+        }
     }
 
     render(ctx) {
@@ -1758,43 +1784,50 @@ class TunnelVisualizer extends BaseVisualizer {
 
         this.currentDepth += this.tunnelSpeed * this.animationSpeed;
 
-        let audioWarp = 1;
-        if (this.frequencyData && this.reactToAudio) {
-            audioWarp = 1 + Utils.average(this.frequencyData) / 255 * this.sensitivity * 0.3;
-        }
-
-        const maxRadius = Math.min(this.width, this.height) / 2;
+        const frequencyData = this.getFilteredFrequencyData();
+        const maxRadius = Math.min(this.width, this.height) / 2.5;
 
         // Draw tunnel rings
         for (let ring = 0; ring < this.rings; ring++) {
             const depth = (ring + (this.currentDepth % 1)) / this.rings;
-            const scale = this.perspective + (1 - this.perspective) * (1 - depth);
-            const alpha = 1 - depth;
-            
-            const ringRadius = maxRadius * scale * audioWarp;
-            const ringRotation = this.currentDepth * 10 + ring * 20;
-            
+            const scale = (1 - depth) * this.perspective;
+            const alpha = Math.pow(1 - depth, 2);
+
+            if (scale <= 0.01) continue;
+
+            const ringRotation = this.currentDepth * 1.5 + depth * this.twist;
+
             ctx.save();
             ctx.rotate(Utils.toRadians(ringRotation));
             ctx.globalAlpha = this.opacity * alpha;
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = Math.max(1, 2.5 * scale);
             
-            // Draw ring segments
-            const segments = 12;
-            for (let seg = 0; seg < segments; seg++) {
-                const segAngle = (seg / segments) * 2 * Math.PI;
-                const x1 = Math.cos(segAngle) * ringRadius * 0.8;
-                const y1 = Math.sin(segAngle) * ringRadius * 0.8;
-                const x2 = Math.cos(segAngle) * ringRadius;
-                const y2 = Math.sin(segAngle) * ringRadius;
+            ctx.beginPath();
+            
+            for (let i = 0; i <= this.segments; i++) {
+                const angle = (i / this.segments) * 2 * Math.PI;
                 
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 3 * scale;
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
+                let radius = maxRadius * scale;
+
+                if (frequencyData && this.reactToAudio) {
+                    const freqIndex = Math.floor((i % this.segments) / this.segments * (frequencyData.length - 1));
+                    const freqValue = frequencyData[freqIndex] || 0;
+                    const audioOffset = (freqValue / 255) * maxRadius * this.wallThickness * this.sensitivity * scale;
+                    radius += audioOffset;
+                }
+                
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
             }
             
+            ctx.stroke();
             ctx.restore();
         }
 

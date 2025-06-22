@@ -50,14 +50,17 @@
             </div>
             <div class="toolbar-right">
                 <div class="view-controls">
-                    <button class="btn-icon" id="zoomIn">
+                    <button class="btn-icon" id="zoomIn" title="Zoom In">
                         <i class="fas fa-search-plus"></i>
                     </button>
-                    <button class="btn-icon" id="zoomOut">
+                    <button class="btn-icon" id="zoomOut" title="Zoom Out">
                         <i class="fas fa-search-minus"></i>
                     </button>
-                    <button class="btn-icon" id="resetZoom">
+                    <button class="btn-icon" id="resetZoom" title="Reset Zoom">
                         <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button class="btn-icon" id="fitToViewport" title="Fit Canvas to Viewport">
+                        <i class="fas fa-compress-arrows-alt"></i>
                     </button>
                 </div>
             </div>
@@ -136,7 +139,8 @@
                             <p>Drag visualizers here or click to add</p>
                         </div>
                     </div>
-                </div>                <div class="canvas-controls">
+                </div>
+                <div class="canvas-controls">
                     <div class="canvas-controls-left">
                         <div class="zoom-level">Zoom: <span id="zoomLevel">100%</span></div>
                         <div class="canvas-size">
