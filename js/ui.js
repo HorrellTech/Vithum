@@ -410,7 +410,7 @@ class UIManager {
         });
     }
 
-    updatePropertiesPanel(visualizer) {
+    /*updatePropertiesPanel(visualizer) {
         const content = document.getElementById('propertiesContent');
 
         if (!visualizer) {
@@ -515,6 +515,36 @@ class UIManager {
                            data-category="audio" data-property="smoothing">
                 </div>
             </div>
+
+            <div class="property-group">
+                <h4>Alpha Pulse</h4>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" class="property-input" ${properties.alphaPulse.alphaPulseEnabled ? 'checked' : ''} 
+                            data-category="alphaPulse" data-property="alphaPulseEnabled">
+                        Enable Alpha Pulsing
+                    </label>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">Pulse Intensity</label>
+                    <input type="range" class="property-input property-range" value="${properties.alphaPulse.alphaPulseIntensity}" 
+                        min="0" max="1" step="0.1" data-category="alphaPulse" data-property="alphaPulseIntensity">
+                    <span class="range-value">${Math.round(properties.alphaPulse.alphaPulseIntensity * 100)}%</span>
+                </div>
+                <div class="property-item">
+                    <label class="property-label">
+                        <input type="checkbox" class="property-input" ${properties.alphaPulse.alphaPulseReverse ? 'checked' : ''} 
+                            data-category="alphaPulse" data-property="alphaPulseReverse">
+                        Reverse Mode (Transparent → Opaque)
+                    </label>
+                </div>
+                <div class="alpha-pulse-info" style="font-size: 12px; color: #999; margin-top: 8px;">
+                    ${properties.alphaPulse.alphaPulseReverse ? 
+                        'Reverse: Starts transparent, becomes visible with audio' : 
+                        'Normal: Starts opaque, becomes transparent with audio'
+                    }
+                </div>
+            </div>
             
             <div class="property-group">
                 <h4>Animation</h4>
@@ -538,7 +568,7 @@ class UIManager {
 
         // Bind property change events
         this.bindPropertyEvents(visualizer);
-    }
+    }*/
 
     populateVisualizerLibrary() {
         const libraryContainer = document.getElementById('visualizerLibrary');
@@ -775,8 +805,13 @@ class UIManager {
             const property = input.getAttribute('data-property');
 
             if (category && property) {
-                input.addEventListener('change', () => {
+                const updateProperty = () => {
                     let value = input.type === 'checkbox' ? input.checked : input.value;
+
+                    // Convert string values to appropriate types
+                    if (input.type === 'number' || input.type === 'range') {
+                        value = parseFloat(value);
+                    }
 
                     // Special handling for transparent background
                     if (property === 'transparentBackground') {
@@ -790,28 +825,27 @@ class UIManager {
                             if (bgColorInput) bgColorInput.disabled = false;
                         }
                     } else {
+                        // This should handle alphaPulse category
                         visualizer.updateProperty(category, property, value);
                     }
-                });
 
-                input.addEventListener('input', () => {
-                    let value = input.type === 'checkbox' ? input.checked : input.value;
-
-                    // Special handling for transparent background
-                    if (property === 'transparentBackground') {
-                        const bgColorInput = document.querySelector('[data-property="backgroundColor"]');
-                        if (value) {
-                            visualizer.updateProperty('appearance', 'backgroundColor', 'transparent');
-                            if (bgColorInput) bgColorInput.disabled = true;
+                    // Update range display values
+                    const rangeValue = input.parentNode.querySelector('.range-value');
+                    if (rangeValue && input.type === 'range') {
+                        if (property === 'opacity' || property === 'smoothing' || property === 'alphaPulseIntensity') {
+                            rangeValue.textContent = Math.round(value * 100) + '%';
+                        } else if (property.includes('Frequency')) {
+                            rangeValue.textContent = value + '%';
+                        } else if (property === 'rotation') {
+                            rangeValue.textContent = Math.round(value) + '°';
                         } else {
-                            const defaultColor = bgColorInput ? bgColorInput.value : '#000000';
-                            visualizer.updateProperty('appearance', 'backgroundColor', defaultColor);
-                            if (bgColorInput) bgColorInput.disabled = false;
+                            rangeValue.textContent = value;
                         }
-                    } else {
-                        visualizer.updateProperty(category, property, value);
                     }
-                });
+                };
+
+                input.addEventListener('change', updateProperty);
+                input.addEventListener('input', updateProperty);
             }
         });
     }

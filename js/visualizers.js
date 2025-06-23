@@ -32,6 +32,13 @@ class BaseVisualizer {
         this.pulseStrength = 0.5;
         this.rotateSpeed = 0;
 
+        // NEW: Alpha pulsing properties
+        this.alphaPulseEnabled = false;
+        this.alphaPulseIntensity = 0.5; // 0-1, how much the alpha changes
+        this.alphaPulseReverse = false; // false = opaque->transparent, true = transparent->opaque
+        this.currentAlphaPulse = 1; // Current alpha multiplier
+
+
         this.audioData = null;
         this.frequencyData = null;
     }
@@ -40,6 +47,26 @@ class BaseVisualizer {
     updateAudioData(audioData, frequencyData) {
         this.audioData = audioData;
         this.frequencyData = frequencyData;
+
+        // NEW: Update alpha pulse based on audio
+        if (this.alphaPulseEnabled && this.reactToAudio && this.frequencyData) {
+            const filteredData = this.getFilteredFrequencyData();
+            const audioLevel = Utils.average(filteredData) / 255;
+            
+            if (this.alphaPulseReverse) {
+                // Reverse mode: transparent by default, becomes opaque with audio
+                this.currentAlphaPulse = audioLevel * this.alphaPulseIntensity * this.sensitivity;
+            } else {
+                // Normal mode: opaque by default, becomes transparent with audio
+                this.currentAlphaPulse = 1 - (audioLevel * this.alphaPulseIntensity * this.sensitivity);
+            }
+            
+            // Clamp the values
+            this.currentAlphaPulse = Math.max(0, Math.min(1, this.currentAlphaPulse));
+        } else {
+            // No alpha pulsing, use full opacity multiplier
+            this.currentAlphaPulse = 1; // FIXED: was this.opacity, should be 1
+        }
     }
 
     // Get bounding box
@@ -95,6 +122,10 @@ class BaseVisualizer {
         this.selected = selected;
     }
 
+    getEffectiveOpacity() {
+        return this.opacity * this.currentAlphaPulse;
+    }
+
     // Get properties for editing
     getProperties() {
         return {
@@ -122,6 +153,11 @@ class BaseVisualizer {
                 animationSpeed: this.animationSpeed,
                 pulseStrength: this.pulseStrength,
                 rotateSpeed: this.rotateSpeed
+            },
+            alphaPulse: {
+                alphaPulseEnabled: this.alphaPulseEnabled,
+                alphaPulseIntensity: this.alphaPulseIntensity,
+                alphaPulseReverse: this.alphaPulseReverse
             }
         };
     }
@@ -148,6 +184,17 @@ class BaseVisualizer {
             }
         } else if (category === 'animation') {
             this[property] = parseFloat(value);
+        } else if (category === 'alphaPulse') {
+            // Handle alpha pulse properties
+            if (property === 'alphaPulseEnabled' || property === 'alphaPulseReverse') {
+                this[property] = Boolean(value);
+            } else if (property === 'alphaPulseIntensity') {
+                this.alphaPulseIntensity = Math.max(0, Math.min(1, parseFloat(value)));
+            }
+            // Reset current alpha pulse when properties change
+            if (!this.alphaPulseEnabled) {
+                this.currentAlphaPulse = 1;
+            }
         }
     }
 
@@ -188,7 +235,10 @@ class BaseVisualizer {
             maxFrequency: this.maxFrequency,
             animationSpeed: this.animationSpeed,
             pulseStrength: this.pulseStrength,
-            rotateSpeed: this.rotateSpeed
+            rotateSpeed: this.rotateSpeed,
+            alphaPulseEnabled: this.alphaPulseEnabled,
+            alphaPulseIntensity: this.alphaPulseIntensity,
+            alphaPulseReverse: this.alphaPulseReverse
         };
     }
 
@@ -221,7 +271,7 @@ class WaveformVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         const bounds = { x: -this.width / 2, y: -this.height / 2, width: this.width, height: this.height };
 
@@ -286,7 +336,7 @@ class FrequencyVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         const bounds = { x: -this.width / 2, y: -this.height / 2, width: this.width, height: this.height };
 
@@ -359,7 +409,7 @@ class CircleVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         let radius = this.baseRadius;
 
@@ -401,7 +451,7 @@ class SpiralVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         if (this.animated) {
             this.animationOffset += this.animationSpeed;
@@ -456,7 +506,7 @@ class RadialVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         ctx.strokeStyle = this.color;
         ctx.lineWidth = this.strokeWidth;
@@ -519,7 +569,7 @@ class ParticleVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         // Update particles
         let energyLevel = 0.1;
@@ -578,7 +628,7 @@ class SpectrumVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         const bounds = { x: -this.width / 2, y: -this.height / 2, width: this.width, height: this.height };
 
@@ -639,7 +689,7 @@ class WaveVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.waveOffset += this.waveSpeed * this.animationSpeed;
 
@@ -694,7 +744,7 @@ class LissajousVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.animationTime += this.animationSpeed;
 
@@ -753,7 +803,7 @@ class VortexVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.currentRotation += this.rotationSpeed * this.animationSpeed;
 
@@ -911,7 +961,7 @@ class PlasmaVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.timeOffset += this.animationSpeed * 0.02; // Slower, smoother time progression
 
@@ -1026,7 +1076,7 @@ class PlasmaVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         // Use image smoothing for upscaling
         ctx.imageSmoothingEnabled = true;
@@ -1098,7 +1148,7 @@ class NetworkVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         // Update nodes
         let audioEnergy = 0.1;
@@ -1127,7 +1177,7 @@ class NetworkVisualizer extends BaseVisualizer {
 
                 if (distance < this.connectionDistance) {
                     const alpha = 1 - distance / this.connectionDistance;
-                    ctx.globalAlpha = this.opacity * alpha * 0.5;
+                    ctx.globalAlpha = this.getEffectiveOpacity() * alpha * 0.5;
                     ctx.beginPath();
                     ctx.moveTo(this.nodes[i].x, this.nodes[i].y);
                     ctx.lineTo(this.nodes[j].x, this.nodes[j].y);
@@ -1220,7 +1270,7 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         // Update animation states
         this.currentRotation += this.rotationSpeed * this.animationSpeed;
@@ -1293,7 +1343,7 @@ class KaleidoscopeVisualizer extends BaseVisualizer {
             const layerScale = 1 - (layer * 0.1);
             const layerHueShift = layer * 60;
             
-            ctx.globalAlpha = layerAlpha * this.opacity;
+            ctx.globalAlpha = layerAlpha * this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity;
             
             this.drawPatternLayer(ctx, maxRadius, layer, audioScale, audioHue, pulseFactor, layerScale, layerHueShift);
             
@@ -1612,7 +1662,7 @@ class GalaxyVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.currentRotation += this.rotationSpeed * this.animationSpeed;
         const maxRadius = Math.min(this.width, this.height) / 2;
@@ -1654,7 +1704,7 @@ class GalaxyVisualizer extends BaseVisualizer {
             const y = Math.sin(spiralAngle) * star.distance * maxRadius * audioBoost;
             
             ctx.fillStyle = this.color;
-            ctx.globalAlpha = this.opacity * star.brightness;
+            ctx.globalAlpha = this.getEffectiveOpacity() * star.brightness;
             ctx.beginPath();
             ctx.arc(x, y, star.size * audioBoost, 0, 2 * Math.PI);
             ctx.fill();
@@ -1682,7 +1732,7 @@ class DNAVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.currentOffset += this.helixSpeed * this.animationSpeed;
 
@@ -1766,7 +1816,7 @@ class FlowerVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.currentBloom += this.bloomSpeed * this.animationSpeed;
 
@@ -1783,7 +1833,7 @@ class FlowerVisualizer extends BaseVisualizer {
             const layerAlpha = 0.8 - layer * 0.2;
             const angleOffset = (layer * 45) + this.currentBloom;
 
-            ctx.globalAlpha = this.opacity * layerAlpha;
+            ctx.globalAlpha = this.getEffectiveOpacity() * layerAlpha;
 
             for (let petal = 0; petal < this.petalCount; petal++) {
                 const angle = (petal / this.petalCount) * 2 * Math.PI + Utils.toRadians(angleOffset);
@@ -1811,7 +1861,7 @@ class FlowerVisualizer extends BaseVisualizer {
         }
 
         // Draw center
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
         ctx.fillStyle = '#ffff00';
         ctx.beginPath();
         ctx.arc(0, 0, maxRadius * 0.15 * audioScale, 0, 2 * Math.PI);
@@ -1865,7 +1915,7 @@ class TunnelVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.currentDepth += this.tunnelSpeed * this.animationSpeed;
 
@@ -1884,7 +1934,7 @@ class TunnelVisualizer extends BaseVisualizer {
 
             ctx.save();
             ctx.rotate(Utils.toRadians(ringRotation));
-            ctx.globalAlpha = this.opacity * alpha;
+            ctx.globalAlpha = this.getEffectiveOpacity() * alpha;
             ctx.strokeStyle = this.color;
             ctx.lineWidth = Math.max(1, 2.5 * scale);
             
@@ -1987,7 +2037,7 @@ class FractalTreeVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.windEffect += this.animationSpeed * this.windStrength;
         this.growthPhase += this.animationSpeed * this.growthSpeed;
@@ -2028,7 +2078,7 @@ class FractalTreeVisualizer extends BaseVisualizer {
         // Draw branch
         ctx.save();
         ctx.lineWidth = Math.max(1, depth * 1.5);
-        ctx.globalAlpha = this.opacity * (0.5 + depth * 0.1);
+        ctx.globalAlpha = this.getEffectiveOpacity() * (0.5 + depth * 0.1);
         
         // Color variation by depth
         if (this.colorVariation) {
@@ -2044,27 +2094,28 @@ class FractalTreeVisualizer extends BaseVisualizer {
         ctx.stroke();
         ctx.restore();
 
-        // Draw leaves at the end branches - Fixed condition
-        if (this.leafMode && depth <= 3 && growthFactor > 0.5) {
+        // Draw leaves at the end branches - FIXED: More lenient conditions and proper positioning
+        if (this.leafMode && depth <= 4 && growthFactor > 0.3 && length > 10) {
             ctx.save();
             ctx.fillStyle = '#90EE90'; // Light green for leaves
-            ctx.globalAlpha = this.opacity * 0.8 * growthFactor; // Make leaves fade in with growth
+            ctx.globalAlpha = this.getEffectiveOpacity() * 0.7 * growthFactor;
             
             // Draw multiple small leaves around the branch end
-            const leafCount = Math.floor(2 + Math.random() * 3); // 2-4 leaves per branch end
+            const leafCount = Math.floor(3 + Math.random() * 4); // 3-6 leaves per branch end
             for (let i = 0; i < leafCount; i++) {
-                const leafAngle = actualAngle + (Math.random() - 0.5) * 60; // Random angle around branch
-                const leafDistance = 5 + Math.random() * 10; // Distance from branch end
+                const leafAngle = actualAngle + (Math.random() - 0.5) * 90; // Wider spread
+                const leafDistance = 8 + Math.random() * 15; // Distance from branch end
                 const leafX = actualEndX + Math.cos(Utils.toRadians(leafAngle)) * leafDistance;
                 const leafY = actualEndY + Math.sin(Utils.toRadians(leafAngle)) * leafDistance;
                 
-                // Draw leaf as small ellipse
+                // Draw leaf as small ellipse with more variation
                 ctx.beginPath();
                 ctx.save();
                 ctx.translate(leafX, leafY);
                 ctx.rotate(Utils.toRadians(leafAngle));
-                ctx.scale(1, 0.6); // Make leaves oval-shaped
-                ctx.arc(0, 0, 3 + Math.random() * 2, 0, 2 * Math.PI);
+                ctx.scale(1, 0.5); // Make leaves more oval-shaped
+                const leafSize = 3 + Math.random() * 3; // Variable leaf size
+                ctx.arc(0, 0, leafSize, 0, 2 * Math.PI);
                 ctx.fill();
                 ctx.restore();
             }
@@ -2224,7 +2275,7 @@ class ReactiveImageVisualizer extends BaseVisualizer {
         const totalScaleX = this.scaleX * this.currentAudioScale;
         const totalScaleY = this.scaleY * this.currentAudioScale;
         ctx.scale(totalScaleX, totalScaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         const bounds = { x: -this.width / 2, y: -this.height / 2, width: this.width, height: this.height };
 
@@ -2240,7 +2291,7 @@ class ReactiveImageVisualizer extends BaseVisualizer {
         if (this.flashEnabled && this.currentFlash > 0.01) {
             ctx.globalCompositeOperation = 'overlay';
             ctx.fillStyle = this.flashColor;
-            ctx.globalAlpha = this.opacity * this.currentFlash * this.flashIntensity;
+            ctx.globalAlpha = this.getEffectiveOpacity() * this.currentFlash * this.flashIntensity;
             
             if (this.shape === 'circle' && this.maskMode) {
                 ctx.beginPath();
@@ -2429,7 +2480,7 @@ class MatrixVisualizer extends BaseVisualizer {
         ctx.scale(this.scaleX, this.scaleY);
 
         // More subtle background fade for better trail effect
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
         ctx.fillStyle = 'rgba(0, 0, 0, 0.12)'; // Reduced from 0.18 for longer trails
         ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
 
@@ -2489,7 +2540,7 @@ class MatrixVisualizer extends BaseVisualizer {
                 const trailY = y - t * this.fontSize;
 
                 // Calculate trail fade (head brightest, tail fades)
-                let trailAlpha = this.opacity * (1 - t / this.trailLength);
+                let trailAlpha = this.getEffectiveOpacity() * (1 - t / this.trailLength);
                 
                 // Apply drop fade
                 trailAlpha *= drop.alpha;
@@ -2588,7 +2639,7 @@ class SunburstVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.currentRotation += this.rotationSpeed * this.animationSpeed;
         ctx.rotate(Utils.toRadians(this.currentRotation));
@@ -2680,7 +2731,7 @@ class Equalizer3DVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         const frequencyData = this.getFilteredFrequencyData();
         const totalBarWidth = this.width / this.barCount;
@@ -2815,7 +2866,7 @@ class FogVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.time += this.speed * this.animationSpeed * 0.5;
 
@@ -2914,7 +2965,7 @@ class StarfieldVisualizer extends BaseVisualizer {
         this.starCount = 400;
         this.speed = 1.5;
         this.zoomSpeed = 0.01;
-        this.starScale = 1;
+        this.starScale = .5;
         this.stars = [];
         this.zoom = 1;
         this.initStars();
@@ -2971,7 +3022,7 @@ class StarfieldVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         // Audio zoom
         let audioZoom = 1;
@@ -3010,7 +3061,7 @@ class StarfieldVisualizer extends BaseVisualizer {
             
             // Only draw stars within bounds
             if (Math.abs(sx) < this.width && Math.abs(sy) < this.height && size > 0) {
-                ctx.globalAlpha = this.opacity * alpha;
+                ctx.globalAlpha = this.getEffectiveOpacity() * alpha;
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(sx, sy, Math.max(0.1, size), 0, 2 * Math.PI);
@@ -3067,7 +3118,7 @@ class PolygonPulseVisualizer extends BaseVisualizer {
         ctx.translate(center.x, center.y);
         ctx.rotate(Utils.toRadians(this.rotation + this.currentRotation));
         ctx.scale(this.scaleX, this.scaleY);
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = this.getEffectiveOpacity(); // Use effective opacity instead of this.opacity
 
         this.currentRotation += this.rotationSpeed * this.animationSpeed;
 

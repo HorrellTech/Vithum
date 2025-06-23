@@ -1019,7 +1019,7 @@ class CanvasManager {
         if (visualizer) {
             visualizer.setSelected(true);
             this.updatePropertiesPanel(visualizer);
-            this.updateVisualizerList(); // Add this line
+            this.updateVisualizerList();
             this.hideDropZone();
             //console.log('Selected visualizer:', visualizer.constructor.name, 'ID:', visualizer.id);
         } else {
@@ -1028,7 +1028,7 @@ class CanvasManager {
                 this.showDropZone();
             }
             this.resetClickCycle();
-            this.updateVisualizerList(); // Add this line
+            this.updateVisualizerList();
         }
     }
 
@@ -1688,6 +1688,38 @@ class CanvasManager {
             </div>
             <div class="frequency-range-info">
                 <small>Frequency Range: ${properties.audio.minFrequency}% - ${properties.audio.maxFrequency}%</small>
+            </div>
+        </div>
+
+        <div class="property-group">
+            <h4>Alpha Pulse</h4>
+            <div class="property-item">
+                <label class="property-label">
+                    <input type="checkbox" ${properties.alphaPulse.alphaPulseEnabled ? 'checked' : ''} 
+                        data-category="alphaPulse" data-property="alphaPulseEnabled"> 
+                    Enable Alpha Pulsing
+                </label>
+            </div>
+            <div class="property-item">
+                <label class="property-label">Pulse Intensity</label>
+                <input type="range" class="property-input property-range" value="${properties.alphaPulse.alphaPulseIntensity}" 
+                    data-category="alphaPulse" data-property="alphaPulseIntensity" min="0" max="1" step="0.1">
+                <span class="range-value">${Math.round(properties.alphaPulse.alphaPulseIntensity * 100)}%</span>
+            </div>
+            <div class="property-item">
+                <label class="property-label">
+                    <input type="checkbox" ${properties.alphaPulse.alphaPulseReverse ? 'checked' : ''} 
+                        data-category="alphaPulse" data-property="alphaPulseReverse"> 
+                    Reverse Mode (Transparent → Opaque)
+                </label>
+            </div>
+            <div class="alpha-pulse-info">
+                <small>
+                    ${properties.alphaPulse.alphaPulseReverse ? 
+                        'Reverse: Starts transparent, becomes visible with audio' : 
+                        'Normal: Starts opaque, becomes transparent with audio'
+                    }
+                </small>
             </div>
         </div>
     `;
