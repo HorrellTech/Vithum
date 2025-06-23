@@ -443,10 +443,25 @@ class CanvasManager {
     }
 
     handleKeyDown(e) {
+        // Check if a text input, textarea, or contenteditable element is focused
+        const activeElement = document.activeElement;
+        const isTextInputFocused = (
+            activeElement && (
+                activeElement.tagName === 'INPUT' ||
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.contentEditable === 'true' ||
+                activeElement.isContentEditable
+            )
+        );
+
+        // Don't handle keyboard shortcuts if a text input is focused
+        if (isTextInputFocused) {
+            return;
+        }
+            
         if (this.selectedVisualizer) {
             switch (e.key) {
                 case 'Delete':
-                case 'Backspace':
                     this.removeVisualizer(this.selectedVisualizer);
                     break;
                 case 'ArrowUp':
@@ -467,7 +482,7 @@ class CanvasManager {
                     break;
                 case 'Tab':
                     e.preventDefault();
-                    // Cycle through overlapping visualizers
+                    // Cycle through overlapping visualizers 
                     this.cycleSelection(e.shiftKey ? -1 : 1);
                     break;
                 case 'v':
@@ -493,33 +508,6 @@ class CanvasManager {
                     break;
             }
         }
-    }
-
-    // Touch event handlers
-    handleTouchStart(e) {
-        e.preventDefault();
-        if (e.touches.length === 1) {
-            const touch = e.touches[0];
-            const mouseEvent = {
-                clientX: touch.clientX,
-                clientY: touch.clientY,
-                preventDefault: () => { }
-            };
-            this.handleMouseDown(mouseEvent);
-        }
-    }
-
-    handleTouchMove(e) {
-        e.preventDefault();
-        if (e.touches.length === 1) {
-            const touch = e.touches[0];
-            this.handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => { } });
-        }
-    }
-
-    handleTouchEnd(e) {
-        e.preventDefault();
-        this.handleMouseUp({});
     }
 
     getSnapPosition(x, y) {
@@ -981,41 +969,7 @@ class CanvasManager {
         }
     }
 
-    handleKeyDown(e) {
-        if (this.selectedVisualizer) {
-            switch (e.key) {
-                case 'Delete':
-                case 'Backspace':
-                    this.removeVisualizer(this.selectedVisualizer);
-                    break;
-                case 'ArrowUp':
-                    this.selectedVisualizer.move(0, e.shiftKey ? -10 : -1);
-                    this.updatePropertiesPanel();
-                    break;
-                case 'ArrowDown':
-                    this.selectedVisualizer.move(0, e.shiftKey ? 10 : 1);
-                    this.updatePropertiesPanel();
-                    break;
-                case 'ArrowLeft':
-                    this.selectedVisualizer.move(e.shiftKey ? -10 : -1, 0);
-                    this.updatePropertiesPanel();
-                    break;
-                case 'ArrowRight':
-                    this.selectedVisualizer.move(e.shiftKey ? 10 : 1, 0);
-                    this.updatePropertiesPanel();
-                    break;
-                case 'Tab':
-                    e.preventDefault();
-                    // Cycle through overlapping visualizers
-                    this.cycleSelection(e.shiftKey ? -1 : 1);
-                    break;
-                case 'Escape':
-                    this.selectVisualizer(null);
-                    this.resetClickCycle();
-                    break;
-            }
-        }
-    }
+    
 
     // Touch event handlers
     handleTouchStart(e) {
@@ -1385,7 +1339,9 @@ class CanvasManager {
         const handleY = bounds.y - 24;
 
         return Utils.pointInCircle(mousePos.x, mousePos.y, handleX, handleY, 8);
-    } handleResize(mousePos) {
+    } 
+    
+    handleResize(mousePos) {
         if (!this.selectedVisualizer || !this.resizeHandle) return;
 
         //console.log('Handling resize with handle:', this.resizeHandle);
